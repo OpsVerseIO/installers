@@ -1,0 +1,10 @@
+[Unit]
+Description=OpsVerse Agent
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/opsverse-telemetry-agent --config.file=/etc/opsverse/agent-config.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
