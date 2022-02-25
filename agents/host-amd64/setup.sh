@@ -3,6 +3,9 @@
 SERVICE_NAME=opsverse-agent
 SERVICE_FILE=/etc/systemd/system/${SERVICE_NAME}.service
 
+NODE_EXPORTER_SERVICE_NAME=node_exporter
+NODE_EXPORTER_SERVICE_FILE=/etc/systemd/system/${NODE_EXPORTER_SERVICE_NAME}.service
+
 # Parse CLI args
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -61,8 +64,10 @@ fi
 # move executable and config to appropriate directories
 mkdir -p /usr/local/bin/ /etc/opsverse
 cp -f ./agent-v0.13.1-linux-amd64 /usr/local/bin/opsverse-telemetry-agent
+cp -f ./node_exporter /usr/local/bin/node_exporter
 cp -f ./agent-config.yaml /etc/opsverse/
 chmod +x /usr/local/bin/opsverse-telemetry-agent
+chmod +x /usr/local/bin/node_exporter
 
 # Replace variables in agent config file
 HOSTNAME=$(hostname)
@@ -81,6 +86,19 @@ if [ -f ${SERVICE_FILE} ]; then
 else
   cp -f ./${SERVICE_NAME}.service ${SERVICE_FILE}
 fi
- 
+
+if [ -f ${NODE_EXPORTER_SERVICE_FILE} ]; then
+  systemctl stop ${NODE_EXPORTER_SERVICE_NAME}.service
+  systemctl disable ${NODE_EXPORTER_SERVICE_NAME}.service
+  cp -f ./${NODE_EXPORTER_SERVICE_NAME}.service ${NODE_EXPORTER_SERVICE_FILE}
+else
+  cp -f ./${NODE_EXPORTER_SERVICE_NAME}.service ${NODE_EXPORTER_SERVICE_FILE}
+fi
+
+# opsverse-agent service
 systemctl enable ${SERVICE_NAME}.service
 systemctl start ${SERVICE_NAME}.service
+
+# node_exporter service
+systemctl enable ${NODE_EXPORTER_SERVICE_NAME}.service
+systemctl start ${NODE_EXPORTER_SERVICE_NAME}.service
