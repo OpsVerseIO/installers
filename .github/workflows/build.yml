@@ -9,6 +9,10 @@ jobs:
   sonarcloud:
     name: SonarCloud
     runs-on: ubuntu-latest
+    env:
+      sonar.organization: "opsverseio"
+      sonar.projectKey: "OpsVerseIO_installers"
+      sonar.host.url: "https://sonarcloud.io"
     steps:
       - uses: actions/checkout@v2
         with:
