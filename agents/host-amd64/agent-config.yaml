@@ -9,9 +9,10 @@ prometheus:
   configs:
     - name: default
       scrape_configs:
-        - job_name: integrations/node-exporter
-          static_configs:
-          - targets: ['localhost:9100']
+        - job_name: file-sd-targets
+          file_sd_configs:
+          - files:
+            - '/etc/opsverse/targets/*.json'
           relabel_configs:
             - source_labels: [__address__]
               regex: '.*'
