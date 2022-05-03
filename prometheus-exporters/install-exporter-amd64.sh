@@ -46,32 +46,38 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" ]; then
   exit 0
 fi
 
-function download_mysqld_exporter () {
-  MYSQL_EXPORTER_VERSION="0.14.0"
-  MYSQL_EXPORTER_BASE_NAME="mysqld_exporter-${MYSQL_EXPORTER_VERSION}.linux-amd64"
+function download_exporter () {
 
-  wget https://github.com/prometheus/mysqld_exporter/releases/download/v${MYSQL_EXPORTER_VERSION}/${MYSQL_EXPORTER_BASE_NAME}.tar.gz
-  tar -xzf ${MYSQL_EXPORTER_BASE_NAME}.tar.gz
-  cp ${MYSQL_EXPORTER_BASE_NAME}/mysqld_exporter /usr/local/bin/
-  chmod +x /usr/local/bin/mysqld_exporter
+  if [ "$EXPORTER" == "mysqld" ]; then
+    EXPORTER_VERSION="0.14.0"
+    EXPORTER_BASE_NAME="mysqld_exporter-${EXPORTER_VERSION}.linux-amd64"
+    EXPORTER_DL_URL="https://github.com/prometheus/mysqld_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
 
-  # cleanup what was downloaded
-  rm -rf ${MYSQL_EXPORTER_BASE_NAME}*
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    cp ${EXPORTER_BASE_NAME}/mysqld_exporter /usr/local/bin/
+    chmod +x /usr/local/bin/mysqld_exporter
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+  fi
 }
 
-function set_mysql_exporter_custom_confs () {
+function set_exporter_custom_confs () {
 
-  cat << EOF > /etc/opsverse/exporters/mysqld/.my.cnf
+  if [ "$EXPORTER" == "mysqld" ]; then
+    cat << EOF > /etc/opsverse/exporters/mysqld/.my.cnf
 [client]
 host=localhost
 port=3306
 user=root
 password="my-secret-pw"
 EOF
+  fi
 
 }
 
-function set_mysqld_exporter_systemd () {
+function set_exporter_systemd () {
 
   if [ -f ${EXPORTER_SERVICE_FILE} ]; then
     systemctl stop ${EXPORTER_SERVICE_NAME}.service
@@ -81,7 +87,8 @@ function set_mysqld_exporter_systemd () {
     cp -f ${EXPORTER_SERVICE_FILE} /tmp
   fi
 
-  cat << EOF > $EXPORTER_SERVICE_FILE
+  if [ "$EXPORTER" == "mysqld" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
 [Unit]
 Description=Prometheus MySQL Server Exporter
 
@@ -93,15 +100,17 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 EOF
+  fi
 
   systemctl enable ${EXPORTER_SERVICE_NAME}.service
   systemctl start ${EXPORTER_SERVICE_NAME}.service
 
 }
 
-function set_mysqld_exporter_scrape_target () {
+function set_exporter_scrape_target () {
 
-  cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+  if [ "$EXPORTER" == "mysqld" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
 [
   {
     "labels": {
@@ -113,14 +122,15 @@ function set_mysqld_exporter_scrape_target () {
   }
 ]
 EOF
+  fi
 
 }
 
-function mysqld_exporter_setup () {
-  download_mysqld_exporter
-  set_mysql_exporter_custom_confs
-  set_mysqld_exporter_systemd
-  set_mysqld_exporter_scrape_target
+function exporter_setup () {
+  download_exporter
+  set_exporter_custom_confs
+  set_exporter_systemd
+  set_exporter_scrape_target
 }
 
 EXPORTER_SERVICE_NAME=prom-${EXPORTER}-exporter
@@ -129,7 +139,4 @@ EXPORTER_SERVICE_FILE=/etc/systemd/system/${EXPORTER_SERVICE_NAME}.service
 # move executable and config to appropriate directories
 mkdir -p /usr/local/bin/ /etc/opsverse/exporters/${EXPORTER} /etc/opsverse/targets
 
-# Download and move the exporter approprately
-if [ "$EXPORTER" == "mysqld" ]; then
-  mysqld_exporter_setup
-fi
+exporter_setup
