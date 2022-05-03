@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -39,6 +39,7 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" ]; then
   echo ""
   echo "Current list of supported exporters:"
   echo "  - mysqld"
+  echo "  - mongodb"
   echo ""
   echo "Example:"
   echo "  sudo ./install-exporter.sh -e mysqld"
@@ -47,6 +48,20 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" ]; then
 fi
 
 function download_exporter () {
+
+  if [ "$EXPORTER" == "mongodb" ]; then
+    EXPORTER_VERSION="0.32.0"
+    EXPORTER_BASE_NAME="mongodb_exporter-${EXPORTER_VERSION}.linux-amd64"
+    EXPORTER_DL_URL="https://github.com/percona/mongodb_exporter/releases/download/v${EXPORTER_VERSION}/mongodb_exporter-${EXPORTER_VERSION}.linux-amd64.tar.gz"
+
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    cp ${EXPORTER_BASE_NAME}/mongodb_exporter /usr/local/bin/
+    chmod +x /usr/local/bin/mongodb_exporter
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+  fi
 
   if [ "$EXPORTER" == "mysqld" ]; then
     EXPORTER_VERSION="0.14.0"
@@ -87,6 +102,21 @@ function set_exporter_systemd () {
     cp -f ${EXPORTER_SERVICE_FILE} /tmp
   fi
 
+  if [ "$EXPORTER" == "mongodb" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus MongoDB Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/mongodb_exporter --mongodb.uri=mongodb://localhost:27017/admin --collect-all --compatible-mode
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
+
   if [ "$EXPORTER" == "mysqld" ]; then
     cat << EOF > $EXPORTER_SERVICE_FILE
 [Unit]
@@ -109,6 +139,20 @@ EOF
 
 function set_exporter_scrape_target () {
 
+  if [ "$EXPORTER" == "mongodb" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/mongodb-exporter"
+    },
+    "targets": [
+      "localhost:9216"
+    ]
+  }
+]
+EOF
+  fi
   if [ "$EXPORTER" == "mysqld" ]; then
     cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
 [
