@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -38,8 +38,9 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" ]
   echo "  -e, --exporter                 The opensource prometheus exporter to install on your machine"
   echo ""
   echo "Current list of supported exporters:"
-  echo "  - mysqld"
   echo "  - mongodb"
+  echo "  - mysqld"
+  echo "  - redis"
   echo ""
   echo "Example:"
   echo "  sudo ./install-exporter.sh -e mysqld"
@@ -52,7 +53,7 @@ function download_exporter () {
   if [ "$EXPORTER" == "mongodb" ]; then
     EXPORTER_VERSION="0.32.0"
     EXPORTER_BASE_NAME="mongodb_exporter-${EXPORTER_VERSION}.linux-amd64"
-    EXPORTER_DL_URL="https://github.com/percona/mongodb_exporter/releases/download/v${EXPORTER_VERSION}/mongodb_exporter-${EXPORTER_VERSION}.linux-amd64.tar.gz"
+    EXPORTER_DL_URL="https://github.com/percona/mongodb_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
 
     wget ${EXPORTER_DL_URL}
     tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
@@ -72,6 +73,20 @@ function download_exporter () {
     tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
     cp ${EXPORTER_BASE_NAME}/mysqld_exporter /usr/local/bin/
     chmod +x /usr/local/bin/mysqld_exporter
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+  fi
+
+  if [ "$EXPORTER" == "redis" ]; then
+    EXPORTER_VERSION="1.37.0"
+    EXPORTER_BASE_NAME="redis_exporter-v${EXPORTER_VERSION}.linux-amd64"
+    EXPORTER_DL_URL="https://github.com/oliver006/redis_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
+
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    cp ${EXPORTER_BASE_NAME}/redis_exporter /usr/local/bin/
+    chmod +x /usr/local/bin/redis_exporter
 
     # cleanup what was downloaded
     rm -rf ${EXPORTER_BASE_NAME}*
@@ -132,6 +147,21 @@ WantedBy=multi-user.target
 EOF
   fi
 
+  if [ "$EXPORTER" == "redis" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus Redis Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/redis_exporter --redis.addr=redis://localhost:6379
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
+
   systemctl enable ${EXPORTER_SERVICE_NAME}.service
   systemctl start ${EXPORTER_SERVICE_NAME}.service
 
@@ -153,6 +183,7 @@ function set_exporter_scrape_target () {
 ]
 EOF
   fi
+
   if [ "$EXPORTER" == "mysqld" ]; then
     cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
 [
@@ -162,6 +193,21 @@ EOF
     },
     "targets": [
       "localhost:9104"
+    ]
+  }
+]
+EOF
+  fi
+
+  if [ "$EXPORTER" == "redis" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/redis-exporter"
+    },
+    "targets": [
+      "localhost:9121"
     ]
   }
 ]
