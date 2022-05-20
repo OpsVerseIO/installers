@@ -16,9 +16,11 @@
 
 SERVICE_NAME=opsverse-agent
 SERVICE_FILE=/etc/systemd/system/${SERVICE_NAME}.service
+SYSV_SERVICE_FILE=/etc/init.d/${SERVICE_NAME}
 
 NODE_EXPORTER_SERVICE_NAME=node_exporter
 NODE_EXPORTER_SERVICE_FILE=/etc/systemd/system/${NODE_EXPORTER_SERVICE_NAME}.service
+NODE_EXPORTER_SYSV_SERVICE_FILE=/etc/init.d/${NODE_EXPORTER_SERVICE_NAME}
 
 # Parse CLI args
 while [[ $# -gt 0 ]]; do
@@ -93,29 +95,69 @@ sed -i "s/__TRACES_HOST__/${TRACES_COLLECTOR_HOST}/g" /etc/opsverse/agent-config
 sed -i "s/__PASSWORD__/${PASS}/g" /etc/opsverse/agent-config.yaml
 sed -i "s/__HOST__/${HOSTNAME}/g" /etc/opsverse/agent-config.yaml
 
-# Setup the systemd service file
-if [ -f ${SERVICE_FILE} ]; then
-  systemctl stop ${SERVICE_NAME}.service
-  systemctl disable ${SERVICE_NAME}.service
+if [ -f /lib/systemd/systemd ]; then
+  # Setup the systemd service file
+  if [ -f ${SERVICE_FILE} ]; then
+    systemctl stop ${SERVICE_NAME}.service
+    systemctl disable ${SERVICE_NAME}.service
 
-  echo "Backing up existing service (${SERVICE_FILE} file to /tmp"
-  cp -f ${SERVICE_FILE} /tmp
+    echo "Backing up existing service (${SERVICE_FILE}) file to /tmp"
+    cp -f ${SERVICE_FILE} /tmp
+  fi
+  cp -f ./${SERVICE_NAME}.service ${SERVICE_FILE}
+
+  if [ -f ${NODE_EXPORTER_SERVICE_FILE} ]; then
+    systemctl stop ${NODE_EXPORTER_SERVICE_NAME}.service
+    systemctl disable ${NODE_EXPORTER_SERVICE_NAME}.service
+
+    echo "Backing up existing service (${NODE_EXPORTER_SERVICE_FILE}) file to /tmp"
+    cp -f ${NODE_EXPORTER_SERVICE_FILE} /tmp
+  fi
+  cp -f ./${NODE_EXPORTER_SERVICE_NAME}.service ${NODE_EXPORTER_SERVICE_FILE}
+
+  # opsverse-agent service
+  systemctl enable ${SERVICE_NAME}.service
+  systemctl start ${SERVICE_NAME}.service
+
+  # node_exporter service
+  systemctl enable ${NODE_EXPORTER_SERVICE_NAME}.service
+  systemctl start ${NODE_EXPORTER_SERVICE_NAME}.service
+
+elif [ -f /sbin/init ]; then
+  
+  echo "Could not find systemd on machine... falling back to SysV"
+
+  # Setup the sysv init file
+  if [ -f ${SYSV_SERVICE_FILE} ]; then
+    chmod 755 ${SYSV_SERVICE_FILE}
+    /etc/init.d/${SERVICE_NAME} stop
+
+    echo "Backing up existing service (${SYSV_SERVICE_FILE}) file to /tmp"
+    cp -f ${SYSV_SERVICE_FILE} /tmp
+  fi
+  cp -f ./${SERVICE_NAME}.sysv ${SYSV_SERVICE_FILE}
+  chmod 755 ${SYSV_SERVICE_FILE}
+
+  if [ -f ${NODE_EXPORTER_SYSV_SERVICE_FILE} ]; then
+    chmod 755 ${NODE_EXPORTER_SYSV_SERVICE_FILE}
+    /etc/init.d/${NODE_EXPORTER_SERVICE_NAME} stop
+
+    echo "Backing up existing service (${NODE_EXPORTER_SYSV_SERVICE_FILE}) file to /tmp"
+    cp -f ${NODE_EXPORTER_SYSV_SERVICE_FILE} /tmp
+  fi
+  cp -f ./${NODE_EXPORTER_SERVICE_NAME}.sysv ${NODE_EXPORTER_SYSV_SERVICE_FILE}
+  chmod 755 ${NODE_EXPORTER_SYSV_SERVICE_FILE}
+
+  # opsverse-agent service
+  chkconfig opsverse-agent on
+  /etc/init.d/${SERVICE_NAME} start
+
+  # node_exporter service
+  chkconfig node_exporter on
+  /etc/init.d/${NODE_EXPORTER_SERVICE_NAME} start
+
+else
+
+  echo "Could not find an init system on your machine. Exiting."
+
 fi
-cp -f ./${SERVICE_NAME}.service ${SERVICE_FILE}
-
-if [ -f ${NODE_EXPORTER_SERVICE_FILE} ]; then
-  systemctl stop ${NODE_EXPORTER_SERVICE_NAME}.service
-  systemctl disable ${NODE_EXPORTER_SERVICE_NAME}.service
-
-  echo "Backing up existing service (${NODE_EXPORTER_SERVICE_FILE} file to /tmp"
-  cp -f ${NODE_EXPORTER_SERVICE_FILE} /tmp
-fi
-cp -f ./${NODE_EXPORTER_SERVICE_NAME}.service ${NODE_EXPORTER_SERVICE_FILE}
-
-# opsverse-agent service
-systemctl enable ${SERVICE_NAME}.service
-systemctl start ${SERVICE_NAME}.service
-
-# node_exporter service
-systemctl enable ${NODE_EXPORTER_SERVICE_NAME}.service
-systemctl start ${NODE_EXPORTER_SERVICE_NAME}.service

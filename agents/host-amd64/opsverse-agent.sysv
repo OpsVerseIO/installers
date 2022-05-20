@@ -1,0 +1,64 @@
+#!/bin/bash
+# 
+# opsverse-agent 	This loads the opsverse-agent 
+#
+# chkconfig: 2345 99 01
+# description: Initializes opsverse-agent 
+# config: /etc/opsverse/config.yaml
+#
+### BEGIN INIT INFO
+# Provides:          opsverse-agent
+# Short-Description: Initializes opsverse-agent 
+# Description:       Initializes opsverse-agent for metrics and logs 
+### END INIT INFO
+
+# Copyright 2022 OpsVerse
+#
+# Based in part on a shell script by
+# Andreas Dilger <adilger@turbolinux.com>  Sep 26, 2001
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+
+usage ()
+{
+	echo $"Usage: $0 {start|stop|status|restart}" 1>&2
+	RETVAL=2
+}
+
+start ()
+{
+	echo $"Starting opsverse-agent" 1>&2
+	/usr/local/bin/opsverse-telemetry-agent --config.file=/etc/opsverse/agent-config.yaml &
+	touch /var/lock/subsys/opsverse-agent
+	success $"opsverse-agent startup"
+	echo
+}
+
+stop ()
+{
+
+	echo $"Stopping opsverse-agent" 1>&2
+	killproc opsverse-telemetry-agent
+	rm -f /var/lock/subsys/opsverse-agent
+	echo
+}
+
+restart ()
+{
+	stop
+	start
+}
+
+case "$1" in
+    stop) stop ;;
+    status)
+	    status opsverse-agent
+	    ;;
+    start) start ;;
+    restart|reload|force-reload) restart ;;
+    *) usage ;;
+esac
+
+exit $RETVAL
