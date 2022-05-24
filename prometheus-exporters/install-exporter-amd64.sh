@@ -207,6 +207,112 @@ EOF
 
 }
 
+# returns true (0) if exporter needs a sysv init script
+function exporter_needs_sysv () {
+
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ]; then
+    return 0
+  fi
+
+  return 1
+}
+
+function set_exporter_sysv () {
+
+  if [ -f ${EXPORTER_SYSV_SCRIPT} ]; then
+    ${EXPORTER_SYSV_SCRIPT} stop
+
+    echo "Backing up existing service ${EXPORTER_SYSV_SCRIPT} file to /tmp"
+    cp -f ${EXPORTER_SYSV_SCRIPT} /tmp
+  fi
+
+  if exporter_needs_sysv $EXPORTER; then
+
+    if [ "$EXPORTER" == "mysqld" ]; then
+      EXPORTER_CONFIG="/etc/opsverse/exporters/mysqld/.my.cnf"
+      EXPORTER_COMMAND="/usr/local/bin/mysqld_exporter --config.my-cnf=/etc/opsverse/exporters/mysqld/.my.cnf"
+    fi
+
+    if [ "$EXPORTER" == "mongodb" ]; then
+      EXPORTER_CONFIG="N/A"
+      EXPORTER_COMMAND="/usr/local/bin/mongodb_exporter --mongodb.uri=mongodb://localhost:27017/admin --collect-all --compatible-mode"
+    fi
+
+    if [ "$EXPORTER" == "redis" ]; then
+      EXPORTER_CONFIG="N/A"
+      EXPORTER_COMMAND="/usr/local/bin/redis_exporter --redis.addr=redis://localhost:6379"
+    fi
+
+    cat << EOF > $EXPORTER_SYSV_SCRIPT
+#!/bin/bash
+#
+# $EXPORTER_SERVICE_NAME 	This loads the $EXPORTER_SERVICE_NAME
+#
+# chkconfig: 2345 99 01
+# description: Initializes $EXPORTER_SERVICE_NAME
+# config: $EXPORTER_CONFIG
+#
+### BEGIN INIT INFO
+# Provides:          $EXPORTER_SERVICE_NAME
+# Short-Description: Initializes $EXPORTER_SERVICE_NAME
+# Description:       Initializes $EXPORTER_SERVICE_NAME for metrics to prometheus
+### END INIT INFO
+
+# Copyright 2022 OpsVerse
+#
+# Based in part on a shell script by
+# Andreas Dilger <adilger@turbolinux.com>  Sep 26, 2001
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+
+usage ()
+{
+	echo $"Usage: \$0 {start|stop|status|restart}" 1>&2
+	RETVAL=2
+}
+
+start ()
+{
+	echo $"Starting $EXPORTER_SERVICE_NAME" 1>&2
+	$EXPORTER_COMMAND &
+	touch /var/lock/subsys/$EXPORTER_SERVICE_NAME
+	success $"$EXPORTER_SERVICE_NAME startup"
+	echo
+}
+
+stop ()
+{
+
+	echo $"Stopping $EXPORTER_SERVICE_NAME" 1>&2
+	killproc $EXPORTER_SERVICE_NAME
+	rm -f /var/lock/subsys/$EXPORTER_SERVICE_NAME
+	echo
+}
+
+restart ()
+{
+	stop
+	start
+}
+
+case "\$1" in
+    stop) stop ;;
+    status)
+	    status $EXPORTER_SERVICE_NAME
+	    ;;
+    start) start ;;
+    restart|reload|force-reload) restart ;;
+    *) usage ;;
+esac
+
+exit \$RETVAL
+EOF
+    fi
+
+}
+
 function set_exporter_scrape_target () {
 
   if [ "$EXPORTER" == "mongodb" ]; then
@@ -278,7 +384,8 @@ function exporter_setup () {
   if [ -f /lib/systemd/systemd ]; then
     set_exporter_systemd
   else
-    echo "systemd not found on system... skipping its unit file setup"
+    echo "systemd not found on system... falling back to SysV"
+    set_exporter_sysv
   fi
 
   set_exporter_scrape_target
@@ -286,6 +393,7 @@ function exporter_setup () {
 
 EXPORTER_SERVICE_NAME=prom-${EXPORTER}-exporter
 EXPORTER_SERVICE_FILE=/etc/systemd/system/${EXPORTER_SERVICE_NAME}.service
+EXPORTER_SYSV_SCRIPT=/etc/init.d/${EXPORTER_SERVICE_NAME}
 
 # move executable and config to appropriate directories
 mkdir -p /usr/local/bin/ /etc/opsverse/exporters/${EXPORTER} /etc/opsverse/targets
