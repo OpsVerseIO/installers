@@ -368,7 +368,7 @@ EOF
       "job": "integrations/jmx-exporter"
     },
     "targets": [
-      "localhost:12345"
+      "localhost:9404"
     ]
   }
 ]
