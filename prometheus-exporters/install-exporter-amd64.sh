@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -52,6 +52,7 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -
   echo "  -e, --exporter                 The opensource prometheus exporter to install on your machine"
   echo ""
   echo "Current list of supported exporters:"
+  echo "  - jmx"
   echo "  - mongodb"
   echo "  - mysqld"
   echo "  - redis"
@@ -105,6 +106,19 @@ function download_exporter () {
     # cleanup what was downloaded
     rm -rf ${EXPORTER_BASE_NAME}*
   fi
+
+  if [ "$EXPORTER" == "jmx" ]; then
+    EXPORTER_VERSION="0.16.1"
+    EXPORTER_BASE_NAME="jmx_prometheus_javaagent-${EXPORTER_VERSION}"
+    EXPORTER_DL_URL="https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.jar"
+
+    wget ${EXPORTER_DL_URL}
+    cp ${EXPORTER_BASE_NAME}.jar /usr/local/bin/
+    chmod +x /usr/local/bin/${EXPORTER_BASE_NAME}.jar
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+  fi
 }
 
 function set_exporter_custom_confs () {
@@ -116,6 +130,13 @@ host=localhost
 port=3306
 user=root
 password="my-secret-pw"
+EOF
+  fi
+
+  if [ "$EXPORTER" == "jmx" ]; then
+    cat << EOF > /etc/opsverse/exporters/jmx/config.yaml
+rules:
+- pattern: ".*"
 EOF
   fi
 
@@ -176,8 +197,13 @@ WantedBy=multi-user.target
 EOF
   fi
 
-  systemctl enable ${EXPORTER_SERVICE_NAME}.service
-  systemctl start ${EXPORTER_SERVICE_NAME}.service
+
+  # Wrapped in this condition because some exporters (like the
+  # jmx agent), don't need to run as services
+  if [ -f ${EXPORTER_SERVICE_FILE} ]; then
+    systemctl enable ${EXPORTER_SERVICE_NAME}.service
+    systemctl start ${EXPORTER_SERVICE_NAME}.service
+  fi
 
 }
 
@@ -228,12 +254,33 @@ EOF
 EOF
   fi
 
+  if [ "$EXPORTER" == "jmx" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/jmx-exporter"
+    },
+    "targets": [
+      "localhost:12345"
+    ]
+  }
+]
+EOF
+  fi
+
 }
 
 function exporter_setup () {
   download_exporter
   set_exporter_custom_confs
-  set_exporter_systemd
+
+  if [ -f /lib/systemd/systemd ]; then
+    set_exporter_systemd
+  else
+    echo "systemd not found on system... skipping its unit file setup"
+  fi
+
   set_exporter_scrape_target
 }
 
