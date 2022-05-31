@@ -309,7 +309,10 @@ esac
 
 exit \$RETVAL
 EOF
-    fi
+
+    chmod +x ${EXPORTER_SYSV_SCRIPT}
+
+  fi
 
 }
 
