@@ -30,7 +30,7 @@ usage ()
 start ()
 {
 	echo $"Starting opsverse-agent" 1>&2
-	/usr/local/bin/opsverse-telemetry-agent --config.file=/etc/opsverse/agent-config.yaml &
+	/usr/local/bin/opsverse-telemetry-agent --config.file=/etc/opsverse/agent-config.yaml >> /var/log/opsverse-telemetry-agent.log 2>&1 &
 	touch /var/lock/subsys/opsverse-agent
 	success $"opsverse-agent startup"
 	echo
