@@ -220,6 +220,7 @@ function exporter_needs_sysv () {
 function set_exporter_sysv () {
 
   if [ -f ${EXPORTER_SYSV_SCRIPT} ]; then
+    chkconfig ${EXPORTER_SERVICE_NAME} off
     ${EXPORTER_SYSV_SCRIPT} stop
 
     echo "Backing up existing service ${EXPORTER_SYSV_SCRIPT} file to /tmp"
@@ -228,19 +229,24 @@ function set_exporter_sysv () {
 
   if exporter_needs_sysv $EXPORTER; then
 
+    EXPORTER_LOG="/var/log/${EXPORTER_SERVICE_NAME}.log"
+
     if [ "$EXPORTER" == "mysqld" ]; then
       EXPORTER_CONFIG="/etc/opsverse/exporters/mysqld/.my.cnf"
       EXPORTER_COMMAND="/usr/local/bin/mysqld_exporter --config.my-cnf=/etc/opsverse/exporters/mysqld/.my.cnf"
+      EXPORTER_KILLPROC="mysqld_exporter"
     fi
 
     if [ "$EXPORTER" == "mongodb" ]; then
       EXPORTER_CONFIG="N/A"
       EXPORTER_COMMAND="/usr/local/bin/mongodb_exporter --mongodb.uri=mongodb://localhost:27017/admin --collect-all --compatible-mode"
+      EXPORTER_KILLPROC="mongodb_exporter"
     fi
 
     if [ "$EXPORTER" == "redis" ]; then
       EXPORTER_CONFIG="N/A"
       EXPORTER_COMMAND="/usr/local/bin/redis_exporter --redis.addr=redis://localhost:6379"
+      EXPORTER_KILLPROC="redis_exporter"
     fi
 
     cat << EOF > $EXPORTER_SYSV_SCRIPT
@@ -276,7 +282,7 @@ usage ()
 start ()
 {
 	echo $"Starting $EXPORTER_SERVICE_NAME" 1>&2
-	$EXPORTER_COMMAND &
+	$EXPORTER_COMMAND >> ${EXPORTER_LOG} 2>&1  &
 	touch /var/lock/subsys/$EXPORTER_SERVICE_NAME
 	success $"$EXPORTER_SERVICE_NAME startup"
 	echo
@@ -286,7 +292,7 @@ stop ()
 {
 
 	echo $"Stopping $EXPORTER_SERVICE_NAME" 1>&2
-	killproc $EXPORTER_SERVICE_NAME
+	killproc $EXPORTER_KILLPROC
 	rm -f /var/lock/subsys/$EXPORTER_SERVICE_NAME
 	echo
 }
@@ -311,6 +317,8 @@ exit \$RETVAL
 EOF
 
     chmod +x ${EXPORTER_SYSV_SCRIPT}
+    chkconfig ${EXPORTER_SERVICE_NAME} on
+    ${EXPORTER_SYSV_SCRIPT} start
 
   fi
 
