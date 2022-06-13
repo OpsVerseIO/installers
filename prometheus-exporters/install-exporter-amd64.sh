@@ -284,6 +284,8 @@ start ()
 	echo $"Starting $EXPORTER_SERVICE_NAME" 1>&2
 	$EXPORTER_COMMAND >> ${EXPORTER_LOG} 2>&1  &
 	touch /var/lock/subsys/$EXPORTER_SERVICE_NAME
+	echo \$(pidof $EXPORTER_KILLPROC) > /var/run/${EXPORTER_SERVICE_NAME}.pid
+
 	success $"$EXPORTER_SERVICE_NAME startup"
 	echo
 }
@@ -294,6 +296,7 @@ stop ()
 	echo $"Stopping $EXPORTER_SERVICE_NAME" 1>&2
 	killproc $EXPORTER_KILLPROC
 	rm -f /var/lock/subsys/$EXPORTER_SERVICE_NAME
+	rm -f /var/run/${EXPORTER_SERVICE_NAME}.pid
 	echo
 }
 
