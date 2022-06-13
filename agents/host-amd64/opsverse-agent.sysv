@@ -32,6 +32,7 @@ start ()
 	echo $"Starting opsverse-agent" 1>&2
 	/usr/local/bin/opsverse-telemetry-agent --config.file=/etc/opsverse/agent-config.yaml >> /var/log/opsverse-telemetry-agent.log 2>&1 &
 	touch /var/lock/subsys/opsverse-agent
+	echo $(pidof opsverse-telemetry-agent) > /var/run/opsverse-agent.pid
 	success $"opsverse-agent startup"
 	echo
 }
@@ -42,6 +43,7 @@ stop ()
 	echo $"Stopping opsverse-agent" 1>&2
 	killproc opsverse-telemetry-agent
 	rm -f /var/lock/subsys/opsverse-agent
+	rm -f /var/run/opsverse-agent.pid
 	echo
 }
 

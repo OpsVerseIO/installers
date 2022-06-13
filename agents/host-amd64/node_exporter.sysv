@@ -31,6 +31,7 @@ start ()
 	echo $"Starting node_exporter" 1>&2
 	/usr/local/bin/node_exporter >> /var/log/node_exporter.log 2>&1 &
 	touch /var/lock/subsys/node_exporter
+	touch $(pidof node_exporter) > /var/run/node_exporter.pid
 	success $"node_exporter startup"
 	echo
 }
@@ -41,6 +42,7 @@ stop ()
 	echo $"Stopping node_exporter" 1>&2
 	killproc node_exporter
 	rm -f /var/lock/subsys/node_exporter
+	rm -f /var/run/node_exporter.pid
 	echo
 }
 
