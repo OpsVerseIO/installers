@@ -220,7 +220,7 @@ Description=Prometheus Nginx Exporter
 
 [Service]
 User=root
-ExecStart=/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://localhost/basic_status
+ExecStart=/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://localhost:8080/basic_status
 Restart=always
 
 [Install]
@@ -277,7 +277,7 @@ function set_exporter_sysv () {
 
     if [ "$EXPORTER" == "nginx" ]; then
       EXPORTER_CONFIG="N/A"
-      EXPORTER_COMMAND="/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://localhost/basic_status"
+      EXPORTER_COMMAND="/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://localhost:8080/basic_status"
       EXPORTER_KILLPROC="nginx-prometheus-exporter"
     fi
 
@@ -420,7 +420,7 @@ EOF
       "job": "integrations/nginx-prometheus-exporter"
     },
     "targets": [
-      "localhost:80"
+      "localhost:9113"
     ]
   }
 ]
