@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -56,6 +56,7 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -
   echo "  - mongodb"
   echo "  - mysqld"
   echo "  - redis"
+  echo "  - nginx"
   echo ""
   echo "Example:"
   echo "  sudo ./install-exporter.sh -e mysqld"
@@ -107,6 +108,21 @@ function download_exporter () {
     rm -rf ${EXPORTER_BASE_NAME}*
   fi
 
+   if [ "$EXPORTER" == "nginx" ]; then
+    EXPORTER_VERSION="0.10.0"
+    EXPORTER_BASE_NAME="nginx-prometheus-exporter_${EXPORTER_VERSION}_linux_amd64"
+    EXPORTER_DL_URL="https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
+
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    cp nginx-prometheus-exporter /usr/local/bin/
+    chmod +x /usr/local/bin/nginx-prometheus-exporter
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+    rm -rf nginx-prometheus-exporter
+  fi
+ 
   if [ "$EXPORTER" == "jmx" ]; then
     EXPORTER_VERSION="0.16.1"
     EXPORTER_BASE_NAME="jmx_prometheus_javaagent-${EXPORTER_VERSION}"
@@ -197,6 +213,22 @@ WantedBy=multi-user.target
 EOF
   fi
 
+  if [ "$EXPORTER" == "nginx" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus Nginx Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://localhost:8080/stub_status
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
+
+
 
   # Wrapped in this condition because some exporters (like the
   # jmx agent), don't need to run as services
@@ -210,7 +242,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ]; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" || "$1" == 'nginx']; then
     return 0
   fi
 
@@ -241,6 +273,12 @@ function set_exporter_sysv () {
       EXPORTER_CONFIG="N/A"
       EXPORTER_COMMAND="/usr/local/bin/mongodb_exporter --mongodb.uri=mongodb://localhost:27017/admin --collect-all --compatible-mode"
       EXPORTER_KILLPROC="mongodb_exporter"
+    fi
+
+    if [ "$EXPORTER" == "nginx" ]; then
+      EXPORTER_CONFIG="N/A"
+      EXPORTER_COMMAND="/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://localhost:8080/stub_status"
+      EXPORTER_KILLPROC="nginx-prometheus-exporter"
     fi
 
     if [ "$EXPORTER" == "redis" ]; then
@@ -368,6 +406,21 @@ EOF
     },
     "targets": [
       "localhost:9121"
+    ]
+  }
+]
+EOF
+  fi
+
+  if [ "$EXPORTER" == "nginx" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/nginx-prometheus-exporter"
+    },
+    "targets": [
+      "localhost:9113"
     ]
   }
 ]
