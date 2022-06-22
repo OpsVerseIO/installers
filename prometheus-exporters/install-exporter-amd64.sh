@@ -242,7 +242,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" || "$1" == 'nginx' ]; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == "nginx" ]; then
     return 0
   fi
 
