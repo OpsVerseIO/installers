@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -52,11 +52,12 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -
   echo "  -e, --exporter                 The opensource prometheus exporter to install on your machine"
   echo ""
   echo "Current list of supported exporters:"
+  echo "  - cadvisor"
   echo "  - jmx"
   echo "  - mongodb"
   echo "  - mysqld"
-  echo "  - redis"
   echo "  - nginx"
+  echo "  - redis"
   echo ""
   echo "Example:"
   echo "  sudo ./install-exporter.sh -e mysqld"
@@ -108,7 +109,21 @@ function download_exporter () {
     rm -rf ${EXPORTER_BASE_NAME}*
   fi
 
-   if [ "$EXPORTER" == "nginx" ]; then
+  if [ "$EXPORTER" == "cadvisor" ]; then
+    EXPORTER_VERSION="0.39.2"
+    EXPORTER_BASE_NAME="cadvisor"
+    EXPORTER_DL_URL="https://github.com/google/cadvisor/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}"
+
+    wget ${EXPORTER_DL_URL}
+    cp ${EXPORTER_BASE_NAME} /usr/local/bin/${EXPORTER_BASE_NAME}
+    chmod +x /usr/local/bin/${EXPORTER_BASE_NAME}
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+  fi
+
+
+  if [ "$EXPORTER" == "nginx" ]; then
     EXPORTER_VERSION="0.10.0"
     EXPORTER_BASE_NAME="nginx-prometheus-exporter_${EXPORTER_VERSION}_linux_amd64"
     EXPORTER_DL_URL="https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
@@ -166,6 +181,21 @@ function set_exporter_systemd () {
 
     echo "Backing up existing service ${EXPORTER_SERVICE_FILE} file to /tmp"
     cp -f ${EXPORTER_SERVICE_FILE} /tmp
+  fi
+
+  if [ "$EXPORTER" == "cadvisor" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus Container Advisor Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/cadvisor -port 9338
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
   fi
 
   if [ "$EXPORTER" == "mongodb" ]; then
@@ -242,7 +272,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" || "$1" == 'nginx' ]; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ]; then
     return 0
   fi
 
@@ -262,6 +292,12 @@ function set_exporter_sysv () {
   if exporter_needs_sysv $EXPORTER; then
 
     EXPORTER_LOG="/var/log/${EXPORTER_SERVICE_NAME}.log"
+
+    if [ "$EXPORTER" == "cadvisor" ]; then
+      EXPORTER_CONFIG="N/A"
+      EXPORTER_COMMAND="/usr/local/bin/cadvisor -port 9338"
+      EXPORTER_KILLPROC="cadvisor"
+    fi
 
     if [ "$EXPORTER" == "mysqld" ]; then
       EXPORTER_CONFIG="/etc/opsverse/exporters/mysqld/.my.cnf"
@@ -366,6 +402,21 @@ EOF
 }
 
 function set_exporter_scrape_target () {
+
+  if [ "$EXPORTER" == "cadvisor" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/cadvisor"
+    },
+    "targets": [
+      "localhost:9338"
+    ]
+  }
+]
+EOF
+  fi
 
   if [ "$EXPORTER" == "mongodb" ]; then
     cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
