@@ -3,7 +3,7 @@ Description=OpsVerse Agent
 
 [Service]
 User=root
-ExecStart=/usr/local/bin/opsverse-telemetry-agent --config.file=/etc/opsverse/agent-config.yaml
+ExecStart=/usr/local/bin/opsverse-telemetry-agent --config.file=/etc/opsverse/agent-config.yaml -config.expand-env
 Restart=always
 
 [Install]
