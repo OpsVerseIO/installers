@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -58,6 +58,7 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -
   echo "  - mysqld"
   echo "  - nginx"
   echo "  - redis"
+  echo "  - vmware"
   echo ""
   echo "Example:"
   echo "  sudo ./install-exporter.sh -e mysqld"
@@ -150,6 +151,20 @@ function download_exporter () {
     # cleanup what was downloaded
     rm -rf ${EXPORTER_BASE_NAME}*
   fi
+
+  if [ "$EXPORTER" == "vmware" ]; then
+    EXPORTER_VERSION="0.18.3"
+    EXPORTER_BASE_NAME="vmware_exporter-${EXPORTER_VERSION}"
+    EXPORTER_DL_URL="https://github.com/pryorda/vmware_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
+
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    mv ${EXPORTER_BASE_NAME} /usr/local/bin/vmware_exporter
+    chmod +x /usr/local/bin/vmware_exporter/vmware_exporter/vmware_exporter.py
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+  fi
 }
 
 function set_exporter_custom_confs () {
@@ -168,6 +183,26 @@ EOF
     cat << EOF > /etc/opsverse/exporters/jmx/config.yaml
 rules:
 - pattern: ".*"
+EOF
+  fi
+
+  if [ "$EXPORTER" == "vmware" ]; then
+    cat << EOF > /etc/opsverse/exporters/vmware/config.yaml
+default:
+    vsphere_host: "vcenter"
+    vsphere_user: "user"
+    vsphere_password: "password"
+    ignore_ssl: False
+    specs_size: 5000
+    fetch_custom_attributes: True
+    fetch_tags: True
+    fetch_alarms: True
+    collect_only:
+        vms: True
+        vmguests: True
+        datastores: True
+        hosts: True
+        snapshots: True
 EOF
   fi
 
@@ -258,6 +293,21 @@ WantedBy=multi-user.target
 EOF
   fi
 
+  if [ "$EXPORTER" == "vmware" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus VMWare Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/vmware_exporter/vmware_exporter/vmware_exporter.py -c /etc/opsverse/exporters/vmware/config.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
+
 
 
   # Wrapped in this condition because some exporters (like the
@@ -272,7 +322,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ]; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] ; then
     return 0
   fi
 
@@ -321,6 +371,12 @@ function set_exporter_sysv () {
       EXPORTER_CONFIG="N/A"
       EXPORTER_COMMAND="/usr/local/bin/redis_exporter --redis.addr=redis://localhost:6379"
       EXPORTER_KILLPROC="redis_exporter"
+    fi
+
+    if [ "$EXPORTER" == "vmware" ]; then
+      EXPORTER_CONFIG="/etc/opsverse/exporters/vmware/config.yaml"
+      EXPORTER_COMMAND="/usr/local/bin/vmware_exporter/vmware_exporter/vmware_exporter.py -c /etc/opsverse/exporters/vmware/config.yaml"
+      EXPORTER_KILLPROC="vmware_exporter.py"
     fi
 
     cat << EOF > $EXPORTER_SYSV_SCRIPT
@@ -487,6 +543,21 @@ EOF
     },
     "targets": [
       "localhost:9404"
+    ]
+  }
+]
+EOF
+  fi
+
+  if [ "$EXPORTER" == "vmware" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/vmware-exporter"
+    },
+    "targets": [
+      "localhost:9272"
     ]
   }
 ]
