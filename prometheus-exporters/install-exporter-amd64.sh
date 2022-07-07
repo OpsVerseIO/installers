@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" "$EXPORTER" != "opsverse-otelcontribcol" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -57,6 +57,7 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -
   echo "  - mongodb"
   echo "  - mysqld"
   echo "  - nginx"
+  echo "  - opsverse-otelcontribcol"
   echo "  - redis"
   echo "  - vmware"
   echo ""
@@ -152,6 +153,19 @@ function download_exporter () {
     rm -rf ${EXPORTER_BASE_NAME}*
   fi
 
+  if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
+    EXPORTER_VERSION="0.34.0"
+    EXPORTER_BASE_NAME="otelcontribcol_linux_amd64"
+    EXPORTER_DL_URL="https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}"
+
+    wget ${EXPORTER_DL_URL}
+    mv ${EXPORTER_BASE_NAME} /usr/local/bin/opsverse-otelcontribcol
+    chmod +x /usr/local/bin/opsverse-otelcontribcol
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+  fi
+
   if [ "$EXPORTER" == "vmware" ]; then
     EXPORTER_VERSION="0.18.3"
     EXPORTER_BASE_NAME="vmware_exporter-${EXPORTER_VERSION}"
@@ -183,6 +197,97 @@ EOF
     cat << EOF > /etc/opsverse/exporters/jmx/config.yaml
 rules:
 - pattern: ".*"
+EOF
+  fi
+
+  if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
+    cat << EOF > /etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+  jaeger:
+    protocols:
+      grpc:
+      thrift_compact:
+      thrift_http:
+  zipkin: {}
+  # Dummy receiver that's never used, because a pipeline is required to have one.
+  # Picked highest port in attempt to avoid conflict
+  otlp/spanmetrics:
+    protocols:
+      grpc:
+        endpoint: "localhost:65535"
+processors:
+  batch:
+  spanmetrics:
+    metrics_exporter: prometheus
+    latency_histogram_buckets: [1ms, 2ms, 6ms, 10ms, 100ms, 250ms]
+    dimensions:
+      # If the span is missing http.method, the processor will insert
+      # the http.method dimension with value 'GET'.
+      # For example, in the following scenario, http.method is not present in a span and
+      # so will be added as a dimension to the metric with value "GET":
+      # - promexample_calls{http_method="GET",operation="/Address",service_name="shippingservice",\
+      #                     span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_UNSET"} 1
+      - name: http.method
+        default: GET
+
+      # If a default is not provided, the http.status_code dimension will be omitted
+      # if the span does not contain http.status_code.
+      # For example, consider a scenario with two spans, one span having http.status_code=200 and another
+      # missing http.status_code. Two metrics would result with this configuration, one with the http_status_code
+      # omitted and the other included:
+      # - promexample_calls{http_status_code="200",operation="/Address",service_name="shippingservice",\
+      #                     span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_UNSET"} 1
+      # - promexample_calls{operation="/Address",service_name="shippingservice",span_kind="SPAN_KIND_SERVER",\
+      #                     status_code="STATUS_CODE_UNSET"} 1
+      - name: http.status_code
+      # - service.name
+      # - operation
+      # - span.kind
+      # - status.code
+  memory_limiter:
+    # Same as --mem-ballast-size-mib CLI argument
+    ballast_size_mib: 683
+    # 80% of maximum memory up to 2G
+    limit_mib: 1500
+    # 25% of limit up to 2G
+    spike_limit_mib: 512
+    check_interval: 5s
+  probabilistic_sampler:
+    hash_seed: 22
+    sampling_percentage: 100
+  attributes/insert:
+    actions:
+      - key: "cluster"
+        value: "default-1"
+        action: insert
+extensions:
+  health_check: {}
+  zpages: {}
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+  zipkin:
+    endpoint: "https://<tracesCollectorHost>/api/v2/spans"
+    headers:
+      'Authorization': 'Basic <base64EncodingOf devopsnow:pass>'
+service:
+  extensions: [health_check, zpages]
+  pipelines:
+    traces/1:
+      receivers: [otlp, zipkin, jaeger]
+      processors: [memory_limiter, batch, attributes/insert, spanmetrics, probabilistic_sampler]
+      exporters: [zipkin]
+    # This pipeline acts as a proxy to the 'metrics' pipeline below,
+    # allowing for further metrics processing if required.
+    metrics/spanmetrics:
+      # This receiver is just a dummy and never used.
+      # Added to pass validation requiring at least one receiver in a pipeline.
+      receivers: [otlp/spanmetrics]
+      exporters: [prometheus]
 EOF
   fi
 
@@ -293,6 +398,21 @@ WantedBy=multi-user.target
 EOF
   fi
 
+  if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=OpsVerse OTel Contrib Collector
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/opsverse-otelcontribcol --config=/etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
+
   if [ "$EXPORTER" == "vmware" ]; then
     cat << EOF > $EXPORTER_SERVICE_FILE
 [Unit]
@@ -322,7 +442,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] ; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] ; then
     return 0
   fi
 
@@ -365,6 +485,12 @@ function set_exporter_sysv () {
       EXPORTER_CONFIG="N/A"
       EXPORTER_COMMAND="/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://localhost:8080/stub_status"
       EXPORTER_KILLPROC="nginx-prometheus-exporter"
+    fi
+
+    if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
+      EXPORTER_CONFIG="/etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml"
+      EXPORTER_COMMAND="/usr/local/bin/opsverse-otelcontribcol --config=/etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml"
+      EXPORTER_KILLPROC="opsverse-otelcontribcol"
     fi
 
     if [ "$EXPORTER" == "redis" ]; then
@@ -513,6 +639,21 @@ EOF
     },
     "targets": [
       "localhost:9121"
+    ]
+  }
+]
+EOF
+  fi
+
+  if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/spanmetrics"
+    },
+    "targets": [
+      "localhost:8889"
     ]
   }
 ]
