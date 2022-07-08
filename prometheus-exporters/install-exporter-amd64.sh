@@ -32,6 +32,21 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    -t|--trace-collector-url)
+      TRACE_COLLECTOR_URL="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -u|--trace-collector-user)
+      TRACE_COLLECTOR_USER="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -p|--trace-collector-pass)
+      TRACE_COLLECTOR_PASS="$2"
+      shift # past argument
+      shift # past value
+      ;;
     -h|--help)
       HELP=true
       shift # past argument
@@ -201,6 +216,33 @@ EOF
   fi
 
   if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
+    if [ -z $TRACE_COLLECTOR_URL ]; then
+      echo "==============="
+      echo "No traces collector URL was passed in."
+      echo "You can get this via the OpsVerse Admin Console:"
+      echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
+      echo "==============="
+        read -p "Enter the traces collector URL (e.g., https://jane-doe.opsverse.cloud/api/v2/spans): " TRACE_COLLECTOR_URL
+    fi
+    if [ -z $TRACE_COLLECTOR_USER ]; then
+      echo "==============="
+      echo "No user for your traces collector endpoint was passed in."
+      echo "You can get this via the OpsVerse Admin Console:"
+      echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
+      echo "==============="
+        read -p "Enter the traces collector user (e.g., devopsnow): " TRACE_COLLECTOR_USER
+    fi
+    if [ -z $TRACE_COLLECTOR_PASS ]; then
+      echo "==============="
+      echo "No password for your traces collector endpoint was passed in. You can get this via the OpsVerse Admin Console:"
+      echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
+      echo "==============="
+        read -p "Enter the traces collector password: " TRACE_COLLECTOR_PASSWORD
+    fi
+
+    TRACE_COLLECTOR_B64_AUTH=$(echo -n "${TRACE_COLLECTOR_USER}:${TRACE_COLLECTOR_PASSWORD}" | base64)
+    INSTANCE=$(hostname)
+
     cat << EOF > /etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml
 receivers:
   otlp:
@@ -229,7 +271,7 @@ processors:
       # the http.method dimension with value 'GET'.
       # For example, in the following scenario, http.method is not present in a span and
       # so will be added as a dimension to the metric with value "GET":
-      # - promexample_calls{http_method="GET",operation="/Address",service_name="shippingservice",\
+      # - promexample_calls{http_method="GET",operation="/Address",service_name="shippingservice",
       #                     span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_UNSET"} 1
       - name: http.method
         default: GET
@@ -239,9 +281,9 @@ processors:
       # For example, consider a scenario with two spans, one span having http.status_code=200 and another
       # missing http.status_code. Two metrics would result with this configuration, one with the http_status_code
       # omitted and the other included:
-      # - promexample_calls{http_status_code="200",operation="/Address",service_name="shippingservice",\
+      # - promexample_calls{http_status_code="200",operation="/Address",service_name="shippingservice",
       #                     span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_UNSET"} 1
-      # - promexample_calls{operation="/Address",service_name="shippingservice",span_kind="SPAN_KIND_SERVER",\
+      # - promexample_calls{operation="/Address",service_name="shippingservice",span_kind="SPAN_KIND_SERVER",
       #                     status_code="STATUS_CODE_UNSET"} 1
       - name: http.status_code
       # - service.name
@@ -261,8 +303,8 @@ processors:
     sampling_percentage: 100
   attributes/insert:
     actions:
-      - key: "cluster"
-        value: "default-1"
+      - key: "instance"
+        value: "${INSTANCE}"
         action: insert
 extensions:
   health_check: {}
@@ -271,9 +313,9 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"
   zipkin:
-    endpoint: "https://<tracesCollectorHost>/api/v2/spans"
+    endpoint: "${TRACE_COLLECTOR_URL}"
     headers:
-      'Authorization': 'Basic <base64EncodingOf devopsnow:pass>'
+      'Authorization': 'Basic ${TRACE_COLLECTOR_B64_AUTH}'
 service:
   extensions: [health_check, zpages]
   pipelines:
