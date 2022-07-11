@@ -203,7 +203,7 @@ function download_exporter () {
 
     wget ${EXPORTER_DL_URL}
     tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
-    mv postgres_exporter /usr/local/bin/
+    cp postgres_exporter /usr/local/bin
     chmod +x /usr/local/bin/postgres_exporter
 
     # cleanup what was downloaded
@@ -370,9 +370,8 @@ EOF
   fi
 
   if [ "$EXPORTER" == "postgres" ]; then
-    cat << EOF > /etc/opsverse/exporters/postgres/config.yaml
-default:
-    DATA_SOURCE_NAME="user=postgres host=/var/run/postgresql/ sslmode=disable"
+    cat << EOF > /etc/opsverse/exporters/postgres/postgres_exporter.env
+DATA_SOURCE_NAME="postgresql://postgres:password@localhost:5432/postgres?sslmode=disable" wrouesnel/postgres_exporter
 EOF
   fi
 
@@ -496,11 +495,16 @@ EOF
   if [ "$EXPORTER" == "postgres" ]; then
     cat << EOF > $EXPORTER_SERVICE_FILE
 [Unit]
-Description=Prometheus Postgres Exporter
+Description=Prometheus exporter for Postgresql
+Wants=network-online.target
+After=network-online.target
 
 [Service]
-User=root
-ExecStart=/usr/local/bin/postgres_exporter -c /etc/opsverse/exporters/postgres/config.yaml
+User=postgres
+Group=postgres
+WorkingDirectory=/usr/local/bin/postgres_exporter
+EnvironmentFile=/etc/opsverse/exporters/postgres/postgres_exporter.env
+ExecStart=/usr/local/bin/postgres_exporter --web.listen-address=:9187 --web.telemetry-path=/metrics
 Restart=always
 
 [Install]
@@ -586,8 +590,8 @@ function set_exporter_sysv () {
     fi
 
     if [ "$EXPORTER" == "postgres" ]; then
-      EXPORTER_CONFIG="/etc/opsverse/exporters/postgres/config.yaml"
-      EXPORTER_COMMAND="/usr/local/bin/postgres_exporter -c /etc/opsverse/exporters/postgres/config.yaml"
+      EXPORTER_CONFIG="/etc/opsverse/exporters/postgres/postgres_exporter.env"
+      EXPORTER_COMMAND="/usr/local/bin/postgres_exporter -c /etc/opsverse/exporters/postgres/postgres_exporter.env"
       EXPORTER_KILLPROC="postgres_exporter"
     fi
 
