@@ -58,7 +58,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" "$EXPORTER" != "opsverse-otelcontribcol" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -75,6 +75,7 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -
   echo "  - opsverse-otelcontribcol"
   echo "  - redis"
   echo "  - vmware"
+  echo "  - postgres"
   echo ""
   echo "Example:"
   echo "  sudo ./install-exporter.sh -e mysqld"
@@ -193,6 +194,21 @@ function download_exporter () {
 
     # cleanup what was downloaded
     rm -rf ${EXPORTER_BASE_NAME}*
+  fi
+
+  if [ "$EXPORTER" == "postgres" ]; then
+    EXPORTER_VERSION="0.10.1"
+    EXPORTER_BASE_NAME="postgres_exporter-${EXPORTER_VERSION}.aix-ppc64"
+    EXPORTER_DL_URL="https://github.com/prometheus-community/postgres_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
+
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    mv postgres_exporter /usr/local/bin/
+    chmod +x /usr/local/bin/postgres_exporter
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+    rm -rf postgres_exporter
   fi
 }
 
@@ -353,6 +369,13 @@ default:
 EOF
   fi
 
+  if [ "$EXPORTER" == "postgres" ]; then
+    cat << EOF > /etc/opsverse/exporters/postgres/config.yaml
+default:
+    DATA_SOURCE_NAME="user=postgres host=/var/run/postgresql/ sslmode=disable"
+EOF
+  fi
+
 }
 
 function set_exporter_systemd () {
@@ -470,6 +493,21 @@ WantedBy=multi-user.target
 EOF
   fi
 
+  if [ "$EXPORTER" == "postgres" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus Postgres Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/postgres_exporter -c /etc/opsverse/exporters/postgres/config.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
+
 
 
   # Wrapped in this condition because some exporters (like the
@@ -484,7 +522,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] ; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] || [ "$1" == "postgres" ] ; then
     return 0
   fi
 
@@ -545,6 +583,12 @@ function set_exporter_sysv () {
       EXPORTER_CONFIG="/etc/opsverse/exporters/vmware/config.yaml"
       EXPORTER_COMMAND="/usr/local/bin/vmware_exporter/vmware_exporter/vmware_exporter.py -c /etc/opsverse/exporters/vmware/config.yaml"
       EXPORTER_KILLPROC="vmware_exporter.py"
+    fi
+
+    if [ "$EXPORTER" == "postgres" ]; then
+      EXPORTER_CONFIG="/etc/opsverse/exporters/postgres/config.yaml"
+      EXPORTER_COMMAND="/usr/local/bin/postgres_exporter -c /etc/opsverse/exporters/postgres/config.yaml"
+      EXPORTER_KILLPROC="postgres_exporter"
     fi
 
     cat << EOF > $EXPORTER_SYSV_SCRIPT
@@ -741,6 +785,21 @@ EOF
     },
     "targets": [
       "localhost:9272"
+    ]
+  }
+]
+EOF
+  fi
+
+  if [ "$EXPORTER" == "postgres" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/postgres-exporter"
+    },
+    "targets": [
+      "localhost:9187"
     ]
   }
 ]
