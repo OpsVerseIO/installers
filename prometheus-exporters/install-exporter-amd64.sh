@@ -58,7 +58,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" -a "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -198,12 +198,12 @@ function download_exporter () {
 
   if [ "$EXPORTER" == "postgres" ]; then
     EXPORTER_VERSION="0.10.1"
-    EXPORTER_BASE_NAME="postgres_exporter-${EXPORTER_VERSION}.aix-ppc64"
+    EXPORTER_BASE_NAME="postgres_exporter-${EXPORTER_VERSION}.linux-amd64"
     EXPORTER_DL_URL="https://github.com/prometheus-community/postgres_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
 
     wget ${EXPORTER_DL_URL}
     tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
-    cp postgres_exporter /usr/local/bin
+    cp ${EXPORTER_BASE_NAME}/postgres_exporter /usr/local/bin
     chmod +x /usr/local/bin/postgres_exporter
 
     # cleanup what was downloaded
@@ -371,7 +371,7 @@ EOF
 
   if [ "$EXPORTER" == "postgres" ]; then
     cat << EOF > /etc/opsverse/exporters/postgres/postgres_exporter.env
-DATA_SOURCE_NAME="postgresql://postgres:password@localhost:5432/postgres?sslmode=disable" wrouesnel/postgres_exporter
+DATA_SOURCE_NAME="postgresql://postgres:postgres123@localhost:5432/?sslmode=disable"
 EOF
   fi
 
@@ -502,7 +502,6 @@ After=network-online.target
 [Service]
 User=postgres
 Group=postgres
-WorkingDirectory=/usr/local/bin/postgres_exporter
 EnvironmentFile=/etc/opsverse/exporters/postgres/postgres_exporter.env
 ExecStart=/usr/local/bin/postgres_exporter --web.listen-address=:9187 --web.telemetry-path=/metrics
 Restart=always
