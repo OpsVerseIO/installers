@@ -238,7 +238,7 @@ EOF
       echo "You can get this via the OpsVerse Admin Console:"
       echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
       echo "==============="
-        read -p "Enter the traces collector URL (e.g., https://jane-doe.opsverse.cloud/api/v2/spans): " TRACE_COLLECTOR_URL
+      read -p "Enter the traces collector URL (e.g., https://jane-doe.opsverse.cloud/api/v2/spans): " TRACE_COLLECTOR_URL
     fi
     if [ -z $TRACE_COLLECTOR_USER ]; then
       echo "==============="
@@ -246,17 +246,27 @@ EOF
       echo "You can get this via the OpsVerse Admin Console:"
       echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
       echo "==============="
-        read -p "Enter the traces collector user (e.g., devopsnow): " TRACE_COLLECTOR_USER
+      read -p "Enter the traces collector user (e.g., devopsnow): " TRACE_COLLECTOR_USER
     fi
     if [ -z $TRACE_COLLECTOR_PASS ]; then
       echo "==============="
       echo "No password for your traces collector endpoint was passed in. You can get this via the OpsVerse Admin Console:"
       echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
       echo "==============="
-        read -p "Enter the traces collector password: " TRACE_COLLECTOR_PASSWORD
+      read -p "Enter the traces collector password: " TRACE_COLLECTOR_PASS
     fi
 
-    TRACE_COLLECTOR_B64_AUTH=$(echo -n "${TRACE_COLLECTOR_USER}:${TRACE_COLLECTOR_PASSWORD}" | base64)
+    # Piping from curl to bash may not allow 'read' to read from stdin, so make sure to have this check
+    # to prompt user to enter details via CLI
+    if [ -z $TRACE_COLLECTOR_URL ] || [ -z $TRACE_COLLECTOR_USER ] || [ -z $TRACE_COLLECTOR_PASS ]; then
+      echo ""
+      echo "Please enter the trace collector URL, username, and password (details above) via the command-line"
+      echo "  using the '-t', '-u', and '-p' flags, respectively"
+
+      exit 1
+    fi
+
+    TRACE_COLLECTOR_B64_AUTH=$(echo -n "${TRACE_COLLECTOR_USER}:${TRACE_COLLECTOR_PASS}" | base64)
     INSTANCE=$(hostname)
 
     cat << EOF > /etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml
