@@ -115,6 +115,9 @@ function install_agent_config () {
   sed -i "s/__HOST__/${HOSTNAME}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
 }
 
+# Ensure target dirs are created
+mkdir -p /usr/local/bin/ /etc/opsverse/targets
+
 if [ -f ${OPSVERSE_AGENT_CONFIG_FULLPATH} ] ; then
 
   echo "An agent config at ${OPSVERSE_AGENT_CONFIG_FULLPATH} already exists..."
@@ -160,7 +163,6 @@ else
 fi
 
 # move executable and config to appropriate directories
-mkdir -p /usr/local/bin/ /etc/opsverse/targets
 cp -f ./agent-v0.13.1-linux-amd64 /usr/local/bin/opsverse-telemetry-agent
 cp -f ./node_exporter /usr/local/bin/node_exporter
 cp -f ./targets-node-exporter.json ${ETC_OPSVERSE}/targets/node-exporter.json
