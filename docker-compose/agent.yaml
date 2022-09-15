@@ -1,0 +1,60 @@
+server:
+  # log_level: debug
+  http_listen_port: 12345
+
+prometheus:
+  global:
+    scrape_interval: ${SCRAPE_INTERVAL}
+  configs:
+    - name: default
+      scrape_configs:
+        - job_name: integrations/node-exporter
+          static_configs:
+          - targets: ['nodeexporter:9100']
+          relabel_configs:
+            - source_labels: [__address__]
+              regex: '.*'
+              target_label: instance
+              replacement: ${HOST}
+        - job_name: cadvisor
+          static_configs:
+          - targets:
+            - cadvisor:8080
+          relabel_configs:
+            - source_labels: [__address__]
+              regex: '.*'
+              target_label: instance
+              replacement: ${HOST}
+      remote_write:
+        - url: ${DEVOPSNOW_METRICS_ENDPOINT}
+          basic_auth:
+            username: ${DEVOPSNOW_USERNAME}
+            password: ${DEVOPSNOW_PASSWORD}
+loki:
+  positions_directory: /tmp/
+  configs:
+    - name: local
+      clients:
+        - url: ${DEVOPSNOW_LOGS_ENDPOINT}
+          basic_auth:
+            username: ${DEVOPSNOW_USERNAME}
+            password: ${DEVOPSNOW_PASSWORD}
+      scrape_configs:
+        # Add a job for any new dir that needs to be tailed for logs
+        - job_name: var-log
+          static_configs:
+            - labels:
+                job: varlog
+                host: ${HOST}
+                __path__: /var/log/*.log
+        - job_name: containers
+          static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: containerlogs
+              host: ${HOST}
+              __path__: /var/lib/docker/containers/*/*log
+
+          pipeline_stages:
+            - docker: {}
