@@ -1,0 +1,55 @@
+version: "2"
+
+services:
+  agent:
+    image: grafana/agent:${AGENT_VERSION}
+    container_name: devopsnow-agent
+    volumes:
+      - /tmp/agent:/tmp/agent
+      - ./agent/config:/etc/agent-config
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    entrypoint:
+      - /bin/agent
+      - -config.file=/etc/agent-config/agent.yaml
+      - -prometheus.wal-directory=/tmp/agent/wal
+      - -config.expand-env
+    ports:
+      - "12345:12345"
+    environment:
+      - HOST=${HOST}
+      - DEVOPSNOW_METRICS_ENDPOINT=${DEVOPSNOW_METRICS_ENDPOINT}
+      - DEVOPSNOW_LOGS_ENDPOINT=${DEVOPSNOW_LOGS_ENDPOINT}
+      - DEVOPSNOW_USERNAME=${DEVOPSNOW_USERNAME}
+      - DEVOPSNOW_PASSWORD=${DEVOPSNOW_PASSWORD}
+      - SCRAPE_INTERVAL=${SCRAPE_INTERVAL}
+    restart: unless-stopped
+
+  nodeexporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: nodeexporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    expose:
+      - 9100
+    labels:
+      org.label-schema.group: "monitoring"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+    - 8080:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
