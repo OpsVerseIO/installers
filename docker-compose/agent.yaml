@@ -26,19 +26,19 @@ prometheus:
               target_label: instance
               replacement: ${HOST}
       remote_write:
-        - url: ${DEVOPSNOW_METRICS_ENDPOINT}
+        - url: ${OPSVERSE_METRICS_ENDPOINT}
           basic_auth:
-            username: ${DEVOPSNOW_USERNAME}
-            password: ${DEVOPSNOW_PASSWORD}
+            username: ${OPSVERSE_USERNAME}
+            password: ${OPSVERSE_PASSWORD}
 loki:
   positions_directory: /tmp/
   configs:
     - name: local
       clients:
-        - url: ${DEVOPSNOW_LOGS_ENDPOINT}
+        - url: ${OPSVERSE_LOGS_ENDPOINT}
           basic_auth:
-            username: ${DEVOPSNOW_USERNAME}
-            password: ${DEVOPSNOW_PASSWORD}
+            username: ${OPSVERSE_USERNAME}
+            password: ${OPSVERSE_PASSWORD}
       scrape_configs:
         # Add a job for any new dir that needs to be tailed for logs
         - job_name: var-log
