@@ -5,6 +5,7 @@
 #  GRAFANA_TOKEN (e.g., awafawwgasdgasgsgd==)
 #  GRAFANA_HOST (e.g., example.com)
 #
+#
 # Required tools on machine:
 #  - curl
 #  - jq
@@ -12,15 +13,22 @@
 # Returns:
 #  - downloaded alerts at "./downloaded-alerts.json"
 #  - downloaed dashboards at "./downloaded-dashboards/"
+#
+# Disclaimer: Tested on Grafana v8
 ##
 
-### alerts ###
+###################################
+# Download alerts
+# NOTE: this is for Grafana unified alerts. For legacy alerts, use API endpoints at ./download-alerts-legacy.sh
+###################################
 curl -X GET \
   -H "Authorization: Bearer ${GRAFANA_TOKEN}" \
   "https://${GRAFANA_HOST}/api/ruler/grafana/api/v1/rules" | jq > 'downloaded-alerts.json'
 
-### dashboards ###
-# See https://gist.github.com/crisidev/bd52bdcc7f029be2f295
+###################################
+# Download dashboards
+# Note: See https://gist.github.com/crisidev/bd52bdcc7f029be2f295 for inspiration
+###################################
 dl_db_path="./downloaded-dashboards"
 mkdir -p $dl_db_path
 for dash in $(curl -H "Authorization: Bearer $GRAFANA_TOKEN" "https://${GRAFANA_HOST}/api/search?query=&" | jq -r '.[] | select(.type == "dash-db") | .uid'); do
