@@ -58,7 +58,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" -a "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" -a "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" -a "$EXPORTER" != "rds" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -76,6 +76,7 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -
   echo "  - redis"
   echo "  - vmware"
   echo "  - postgres"
+  echo "  - rds"
   echo ""
   echo "Example:"
   echo "  sudo ./install-exporter.sh -e mysqld"
@@ -209,6 +210,21 @@ function download_exporter () {
     # cleanup what was downloaded
     rm -rf ${EXPORTER_BASE_NAME}*
     rm -rf postgres_exporter
+  fi
+
+  if [ "$EXPORTER" == "rds" ]; then
+    EXPORTER_VERSION="0.7.2"
+    EXPORTER_BASE_NAME="rds_exporter-${EXPORTER_VERSION}.linux-amd64"
+    EXPORTER_DL_URL="https://github.com/percona/rds_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
+
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    cp ${EXPORTER_BASE_NAME}/rds_exporter /usr/local/bin
+    chmod +x /usr/local/bin/rds_exporter
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+    rm -rf rds_exporter
   fi
 }
 
@@ -385,6 +401,18 @@ DATA_SOURCE_NAME="postgresql://postgres:postgres123@localhost:5432/?sslmode=disa
 EOF
   fi
 
+  if [ "$EXPORTER" == "rds" ]; then
+    cat << EOF > /etc/opsverse/exporters/rds/config.yaml
+instances:
+  - region: us-east-1
+    instance: rds-mysql57
+    aws_access_key: AKIAIOSFODNN7EXAMPLE
+    aws_secret_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    disable_basic_metrics: false
+    disable_enhanced_metrics: false
+EOF
+  fi
+
 }
 
 function set_exporter_systemd () {
@@ -521,6 +549,21 @@ WantedBy=multi-user.target
 EOF
   fi
 
+if [ "$EXPORTER" == "rds" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus RDS Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/rds_exporter --config.file=/etc/opsverse/exporters/rds/config.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
+
 
 
   # Wrapped in this condition because some exporters (like the
@@ -535,7 +578,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] || [ "$1" == "postgres" ] ; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] || [ "$1" == "postgres" ] || [ "$1" == "rds" ] ; then
     return 0
   fi
 
@@ -602,6 +645,12 @@ function set_exporter_sysv () {
       EXPORTER_CONFIG="/etc/opsverse/exporters/postgres/postgres_exporter.env"
       EXPORTER_COMMAND="/usr/local/bin/postgres_exporter -c /etc/opsverse/exporters/postgres/postgres_exporter.env"
       EXPORTER_KILLPROC="postgres_exporter"
+    fi
+
+    if [ "$EXPORTER" == "rds" ]; then
+      EXPORTER_CONFIG="/etc/opsverse/exporters/rds/config.yaml"
+      EXPORTER_COMMAND="/usr/local/bin/rds_exporter --config.file=/etc/opsverse/exporters/rds/config.yaml"
+      EXPORTER_KILLPROC="rds_exporter"
     fi
 
     cat << EOF > $EXPORTER_SYSV_SCRIPT
@@ -813,6 +862,21 @@ EOF
     },
     "targets": [
       "localhost:9187"
+    ]
+  }
+]
+EOF
+  fi
+
+  if [ "$EXPORTER" == "rds" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/rds-exporter"
+    },
+    "targets": [
+      "localhost:9042"
     ]
   }
 ]
