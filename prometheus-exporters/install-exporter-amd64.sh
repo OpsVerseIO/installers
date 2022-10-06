@@ -404,10 +404,10 @@ EOF
   if [ "$EXPORTER" == "rds" ]; then
     cat << EOF > /etc/opsverse/exporters/rds/config.yaml
 instances:
-  - region: us-east-1
-    instance: rds-mysql57
-    aws_access_key: AKIAIOSFODNN7EXAMPLE
-    aws_secret_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+  - region: <region>
+    instance: <instance>
+    aws_access_key: <aws_access_key>
+    aws_secret_key: <aws_secret_key>
     disable_basic_metrics: false
     disable_enhanced_metrics: false
 EOF
