@@ -14,12 +14,12 @@ There are two parts:
 
 Export the traces via `jaeger-query` API to get traces locally as JSON (API is per-service)
 
-1. Port-forward the jaeger-query service
+1. Port-forward the jaeger-query service:
 
-        $ NAMESPACE=your-ns-observe
+        $ NAMESPACE=<namespace-of-jaeger>
         $ kubectl -n $NAMESPACE port-forward svc/$(kubectl -n $NAMESPACE get services --selector=app.kubernetes.io/name=jaeger,app.kubernetes.io/component=query | tail -n 1 | awk '{print $1}') 16686:16686
 
-2. Run the `export-traces.sh` (can download from this repo)
+2. Run the `export-traces.sh` script:
 
         $ curl -o export-traces.sh https://raw.githubusercontent.com/OpsVerseIO/installers/main/misc/jaeger-to-clickhouse-sql-conversion/export-traces.sh 
         $ chmod +x export-traces.sh
@@ -35,7 +35,7 @@ This will create `./traces-<service>.json` files in your current directory
         $ chmod +x trace-migration-tool 
         $ ./trace-migration-tool -service console-ui --file trace-console-ui.json >> import.sql
 
-2. Optional: if you several services, you can run this line to iterate thru each JSON file:
+2. Optional: if you have several services, you can run this line to iterate thru each JSON file:
 
         $ for tracefile in traces-*.json; do \
             service=$(basename $tracefile .json | cut -c 8-); \
