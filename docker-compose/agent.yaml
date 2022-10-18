@@ -1,10 +1,14 @@
 server:
-  # log_level: debug
-  http_listen_port: 12345
+  log_level: info
 
-prometheus:
+metrics:
   global:
     scrape_interval: ${SCRAPE_INTERVAL}
+    remote_write:
+      - url: ${OPSVERSE_METRICS_ENDPOINT}
+        basic_auth:
+          username: ${OPSVERSE_USERNAME}
+          password: ${OPSVERSE_PASSWORD}
   configs:
     - name: default
       scrape_configs:
@@ -25,36 +29,40 @@ prometheus:
               regex: '.*'
               target_label: instance
               replacement: ${HOST}
-      remote_write:
-        - url: ${OPSVERSE_METRICS_ENDPOINT}
-          basic_auth:
-            username: ${OPSVERSE_USERNAME}
-            password: ${OPSVERSE_PASSWORD}
-loki:
-  positions_directory: /tmp/
-  configs:
-    - name: local
-      clients:
-        - url: ${OPSVERSE_LOGS_ENDPOINT}
-          basic_auth:
-            username: ${OPSVERSE_USERNAME}
-            password: ${OPSVERSE_PASSWORD}
-      scrape_configs:
-        # Add a job for any new dir that needs to be tailed for logs
-        - job_name: var-log
-          static_configs:
-            - labels:
-                job: varlog
-                host: ${HOST}
-                __path__: /var/log/*.log
-        - job_name: containers
-          static_configs:
-          - targets:
-              - localhost
-            labels:
-              job: containerlogs
-              host: ${HOST}
-              __path__: /var/lib/docker/containers/*/*log
 
-          pipeline_stages:
-            - docker: {}
+logs:
+  configs:
+  - name: default
+    positions:
+      filename: /tmp/positions.yaml
+    scrape_configs:
+    - job_name: "docker_scrape"
+      docker_sd_configs:
+        - host: unix:///var/run/docker.sock
+          refresh_interval: 5s
+          filters:
+            - name: name
+              values: ['devopsnow-agent']
+      relabel_configs:
+        - action: labelmap
+          regex: __meta_docker_(.+)
+          replacement: $1
+    - job_name: var-log
+      static_configs:
+        - labels:
+            job: varlog
+            host: ${HOST}
+            __path__: /var/log/*.log
+    - job_name: containers
+      static_configs:
+        - targets:
+            - localhost
+          labels:
+            job: containerlogs
+            host: ${HOST}
+            __path__: /var/lib/docker/containers/*/*log
+    clients:
+      - url: ${OPSVERSE_LOGS_ENDPOINT}
+        basic_auth:
+          username: ${OPSVERSE_USERNAME}
+          password: ${OPSVERSE_PASSWORD}
