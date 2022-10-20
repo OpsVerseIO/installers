@@ -44,20 +44,6 @@ logs:
         - action: labelmap
           regex: __meta_docker_(.+)
           replacement: $1
-    - job_name: var-log
-      static_configs:
-        - labels:
-            job: varlog
-            host: ${HOST}
-            __path__: /var/log/*.log
-    - job_name: containers
-      static_configs:
-        - targets:
-            - localhost
-          labels:
-            job: containerlogs
-            host: ${HOST}
-            __path__: /var/lib/docker/containers/*/*log
     clients:
       - url: ${OPSVERSE_LOGS_ENDPOINT}
         basic_auth:
