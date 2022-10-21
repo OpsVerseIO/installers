@@ -9,10 +9,11 @@ services:
       - ./agent/config:/etc/agent-config
       - /var/log:/var/log
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     entrypoint:
       - /bin/agent
       - -config.file=/etc/agent-config/agent.yaml
-      - -prometheus.wal-directory=/tmp/agent/wal
+      - -metrics.wal-directory=/tmp/agent/wal
       - -config.expand-env
     ports:
       - "12345:12345"
@@ -42,7 +43,7 @@ services:
       - 9100
     labels:
       org.label-schema.group: "monitoring"
-
+ 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
