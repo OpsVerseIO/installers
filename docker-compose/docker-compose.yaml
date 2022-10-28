@@ -54,3 +54,24 @@ services:
     - /var/run:/var/run:rw
     - /sys:/sys:ro
     - /var/lib/docker/:/var/lib/docker:ro
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.34.0
+    command: ["/otelcontribcol", "--config=/config/otel-collector-config.yaml", "--mem-ballast-size-mib=683"]
+    volumes:
+      - ./otel-collector-config.yaml:/config/otel-collector-config.yaml
+    ports:
+      - "1777:1777"    # pprof extension
+      - "8887:8888"    # Default endpoint querying metrics (prometheus)
+      - "9411:9411"    # Default endpoint for Zipkin receiver.
+      - "14250:14250"  # Default endpoint for Jaeger HTTP receiver.
+      - "14268:14268"  # Default endpoint for Jaeger HTTO receiver.
+      - "55678"        # OpenCensus receiver
+      - "55680:55680"  # OTLP HTTP/2.0 legacy port
+      - "55681:55681"  # OTLP HTTP/1.0 receiver
+      - "4317:4317"    # Default endpoint for OTLP GRPC receiver
+      - "55679:55679"  # Default endpoint for ZPages.
+      - "13133"        # health_check
+    deploy:
+      mode: replicated
+      replicas: 1
