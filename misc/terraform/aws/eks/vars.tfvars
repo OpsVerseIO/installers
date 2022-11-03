@@ -8,4 +8,4 @@ subnet_ids = [
     "subnet-456789" 
 ]
 vpc_id = "vpc-123456"
-keypair_name = "bastion"
+keypair_name = "existing-keypair-name-to-use"
