@@ -9,7 +9,7 @@ module "opsverse-eks-cluster" {
 
   cluster_name    = "opsverse-eks-cluster"
   cluster_version = "1.21"
-  # manage_aws_auth= "true"
+  manage_aws_auth= "true"
 
   // Need at least 2 AZs for EKS to create cluster
   subnets         = [
@@ -30,10 +30,29 @@ module "opsverse-eks-cluster" {
       root_volume_size = "30"
       root_volume_type = "gp2"
       key_name = var.keypair_name
+      
+      # Pick the private subnets from above
       subnets = [
         "${var.subnet_ids[0]}",
         "${var.subnet_ids[2]}"
       ]
     }
   ]
+}
+
+data "aws_eks_cluster" "cluster" {
+  name = module.opsverse-eks-cluster.cluster_id
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.opsverse-eks-cluster.cluster_id
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
+  
+  # todo: pin version of this date (git blame) here
+  # version                = "??"
 }
