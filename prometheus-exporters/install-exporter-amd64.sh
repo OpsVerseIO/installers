@@ -58,7 +58,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" -a "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" -a "$EXPORTER" != "rds" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" -a "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" -a "$EXPORTER" != "rds" -a "$EXPORTER" != "blackbox" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
@@ -77,6 +77,7 @@ if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -
   echo "  - vmware"
   echo "  - postgres"
   echo "  - rds"
+  echo "  - blackbox"
   echo ""
   echo "Example:"
   echo "  sudo ./install-exporter.sh -e mysqld"
@@ -225,6 +226,21 @@ function download_exporter () {
     # cleanup what was downloaded
     rm -rf ${EXPORTER_BASE_NAME}*
     rm -rf rds_exporter
+  fi
+
+  if [ "$EXPORTER" == "blackbox" ]; then
+    EXPORTER_VERSION="0.22.0"
+    EXPORTER_BASE_NAME="blackbox_exporter-${EXPORTER_VERSION}.linux-amd64"
+    EXPORTER_DL_URL="https://github.com/prometheus/blackbox_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
+
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    cp ${EXPORTER_BASE_NAME}/blackbox_exporter /usr/local/bin
+    chmod +x /usr/local/bin/blackbox_exporter
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+    rm -rf blackbox_exporter
   fi
 }
 
@@ -413,6 +429,25 @@ instances:
 EOF
   fi
 
+  if [ "$EXPORTER" == "blackbox" ]; then
+    cat << EOF > /etc/opsverse/exporters/blackbox/config.yaml
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      method: GET
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: false
+      no_follow_redirects: false
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+      tls_config:
+        insecure_skip_verify: true
+EOF
+  fi
+
 }
 
 function set_exporter_systemd () {
@@ -564,6 +599,21 @@ WantedBy=multi-user.target
 EOF
   fi
 
+if [ "$EXPORTER" == "blackbox" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus Blackbox Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/blackbox_exporter --config.file=/etc/opsverse/exporters/blackbox/config.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
+
 
 
   # Wrapped in this condition because some exporters (like the
@@ -578,7 +628,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] || [ "$1" == "postgres" ] || [ "$1" == "rds" ] ; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] || [ "$1" == "postgres" ] || [ "$1" == "rds" ] || [ "$1" == "blackbox" ] ; then
     return 0
   fi
 
@@ -651,6 +701,12 @@ function set_exporter_sysv () {
       EXPORTER_CONFIG="/etc/opsverse/exporters/rds/config.yaml"
       EXPORTER_COMMAND="/usr/local/bin/rds_exporter --config.file=/etc/opsverse/exporters/rds/config.yaml"
       EXPORTER_KILLPROC="rds_exporter"
+    fi
+
+    if [ "$EXPORTER" == "blackbox" ]; then
+      EXPORTER_CONFIG="/etc/opsverse/exporters/blackbox/config.yaml"
+      EXPORTER_COMMAND="/usr/local/bin/blackbox_exporter --config.file=/etc/opsverse/exporters/blackbox/config.yaml"
+      EXPORTER_KILLPROC="blackbox_exporter"
     fi
 
     cat << EOF > $EXPORTER_SYSV_SCRIPT
@@ -877,6 +933,21 @@ EOF
     },
     "targets": [
       "localhost:9042"
+    ]
+  }
+]
+EOF
+  fi
+
+  if [ "$EXPORTER" == "blackbox" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/blackbox-exporter"
+    },
+    "targets": [
+      "localhost:9115"
     ]
   }
 ]
