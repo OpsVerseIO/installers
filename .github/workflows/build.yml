@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - main
+      - navin/sonarqube_test
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -16,8 +16,9 @@ jobs:
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         with:
-	  organization: "opsverseio"
-          projectKey: "OpsVerseIO_installers"
+          args: >
+            -Dsonar.organization=opsverseio
+            -Dsonar.projectKey=OpsVerseIO_installers
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
