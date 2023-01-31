@@ -54,3 +54,30 @@ services:
     - /var/run:/var/run:rw
     - /sys:/sys:ro
     - /var/lib/docker/:/var/lib/docker:ro
+
+  #   mysqld:
+  #     platform: linux/x86_64
+  #     image: mysql:5.6
+  #     container_name: mysqld
+  #     environment:
+  #       - MYSQL_ALLOW_EMPTY_PASSWORD=false
+  #     volumes:
+  #       - ./mysql:/etc/mysql/conf.d
+  #       - ~/var/mysql:/var/lib/mysql
+  #     ports:
+  #       - 3306:3306
+
+  # mysqld-exporter:
+  #   platform: linux/x86_64
+  #   image: quay.io/prometheus/mysqld-exporter
+  #   command:
+  #    --collect.info_schema.tablestats
+  #   container_name: mysqld-exporter
+  #   environment:
+  #     - DATA_SOURCE_NAME=<user>:<password>@(mysqld:3306)/
+  #   ports:
+  #     - 9104:9104
+  #   links:
+  #     - mysqld
+  #   depends_on:
+  #     - mysqld
