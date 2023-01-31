@@ -54,3 +54,15 @@ services:
     - /var/run:/var/run:rw
     - /sys:/sys:ro
     - /var/lib/docker/:/var/lib/docker:ro
+
+  # mysqld-exporter:
+  #   platform: linux/x86_64
+  #   image: quay.io/prometheus/mysqld-exporter
+  #   command:
+  #    --collect.info_schema.tablestats
+  #   container_name: mysqld-exporter
+  #   environment:
+  #     - DATA_SOURCE_NAME=<user>:<password>@(<db_name>:<db_port>)/
+  #   ports:
+  #     - 9104:9104
+  
