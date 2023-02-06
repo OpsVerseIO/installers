@@ -1,0 +1,5 @@
+collector:
+  service:
+    services-where: "Name='windows_exporter'"
+log:
+  level: warn
