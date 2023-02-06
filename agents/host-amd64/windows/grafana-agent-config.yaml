@@ -35,4 +35,4 @@ loki:
             - labels:
                 job: windows-var-log
                 host: __HOSTNAME__
-                __path__: C:\ProgramData\logs.txt
+                __path__: __LOG_FILE_PATH__
