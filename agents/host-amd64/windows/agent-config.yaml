@@ -16,22 +16,22 @@ prometheus:
             - source_labels: [__address__]
               regex: '.*'
               target_label: instance
-              replacement:  <hostname>
+              replacement: __HOST__
       remote_write:
-        - url: https://<vm_hostname>/api/v1/write
+        - url: https://__METRICS_HOST__/api/v1/write
           basic_auth:
-            username: <username>
-            password: <password>
+            username: devopsnow
+            password: __PASSWORD__
 
 loki:
   positions_directory: C:\ProgramData\grafana-agent-wal
   configs:
     - name: windows-var-log
       clients:
-        - url: https://<loki_hostname>/loki/api/v1/push
+        - url: https://__LOGS_HOST__/loki/api/v1/push
           basic_auth:
-            username: <username>
-            password: <password>
+            username: devopsnow
+            password: __PASSWORD__
       scrape_configs:
         # Add a job for any new dir that needs to be tailed for logs
         - job_name: windows-var-log
@@ -43,5 +43,5 @@ loki:
           static_configs:
             - labels:
                 job: windows-var-log
-                host: <host_name> 
+                host: __HOST__ 
                 __path__: <log_file_path>
