@@ -1,2 +1,2 @@
 # Installers
-Build scripts installers we can distribute
+Installers for client side agents
