@@ -9,18 +9,14 @@ $hostname= Read-Host -Prompt "Enter Unique Hostname"
 $path= "C:\Program Files\Grafana Agent\healthcheck"
 
 $metricsUrl= Read-Host -Prompt "Enter ObserveNow Metrics URL"
-if($metricsUrl.EndsWith("/api/v1/write")) {
-    continue
-} else {
+if(!($metricsUrl.EndsWith("/api/v1/write"))) {
     $metricsUrl= $metricsUrl + "/api/v1/write"
 }
 
 $logsUrl= Read-Host -Prompt "Enter ObserveNow Logs URL"
-if($logsUrl.EndsWith("/loki/api/v1/push")) {
-    continue
-} else {
+if(!($logsUrl.EndsWith("/loki/api/v1/push"))) {
     $logsUrl= $logsUrl + "/loki/api/v1/push"
-}
+} 
 
 $password= Read-Host -Prompt "Enter password"
 
