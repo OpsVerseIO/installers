@@ -14,20 +14,20 @@ prometheus:
               target_label: instance
               replacement: __HOSTNAME__
       remote_write:
-        - url: https://metrics-opsverse-mars.asia-south1.gcp.opsverse.cloud/api/v1/write
+        - url: __METRICS_URL__
           basic_auth:
             username: devopsnow
-            password: chang3me
+            password: __PASSWORD__
 
 loki:
   positions_directory: C:\ProgramData\grafana-agent-wal
   configs:
     - name: windows-var-log
       clients:
-        - url: https://logs-opsverse-mars.asia-south1.gcp.opsverse.cloud/loki/api/v1/push
+        - url: __LOGS_URL__
           basic_auth:
             username: devopsnow
-            password: chang3me
+            password: __PASSWORD__
       scrape_configs:
         # Add a job for any new dir that needs to be tailed for logs
         - job_name: windows-var-log

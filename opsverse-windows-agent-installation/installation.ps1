@@ -4,6 +4,26 @@ echo "Running OpsVerse ObserveNow Windows Metrics Exporter Installation"
 
 $hostname= Read-Host -Prompt "Enter Unique Hostname"
 
+[bool] $flag= $false
+
+$path= "C:\Program Files\Grafana Agent\healthcheck"
+
+$metricsUrl= Read-Host -Prompt "Enter ObserveNow Metrics URL"
+if($metricsUrl.EndsWith("/api/v1/write")) {
+    continue
+} else {
+    $metricsUrl= $metricsUrl + "/api/v1/write"
+}
+
+$logsUrl= Read-Host -Prompt "Enter ObserveNow Logs URL"
+if($logsUrl.EndsWith("/loki/api/v1/push")) {
+    continue
+} else {
+    $logsUrl= $logsUrl + "/loki/api/v1/push"
+}
+
+$password= Read-Host -Prompt "Enter password"
+
 $schedulerName = "agents-health-check"
 $schedulerExists = Get-ScheduledTask | Where-Object {$_.TaskName -like $schedulerName } -ErrorAction SilentlyContinue
 
@@ -25,6 +45,7 @@ if($serviceExists) {
 
 $grafanaAgentService = Get-Service -Name "Grafana Agent" -ErrorAction SilentlyContinue
 if ($grafanaAgentService.Length -gt 0) {
+    $flag= $true
     echo "Stop Running Grafana Agent Service"
     Stop-Service 'Grafana Agent' -Force -NoWait
     Start-Sleep -Seconds 5
@@ -44,9 +65,16 @@ Start-Sleep -Seconds 10
 cp .\windows_exporter-0.20.0-amd64.exe 'C:\Program Files\Grafana Agent'
 cp .\agent-config.yaml 'C:\Program Files\Grafana Agent\agent-config.yaml'
 cp .\windows-agent-config.yaml 'C:\Program Files\Grafana Agent\windows-agent-config.yaml'
-cp .\agents-health-check.ps1 'C:\Program Files\Grafana Agent\agents-health-check.ps1'
+If(!(test-path -PathType container $path))
+{
+      New-Item -ItemType Directory -Path $path
+}
+cp .\healthcheck\agents-health-check.ps1 'C:\Program Files\Grafana Agent\healthcheck\agents-health-check.ps1'
 
 (Get-Content 'C:\Program Files\Grafana Agent\agent-config.yaml').replace("__HOSTNAME__", $hostname) | Set-Content 'C:\Program Files\Grafana Agent\agent-config.yaml'
+(Get-Content 'C:\Program Files\Grafana Agent\agent-config.yaml').replace("__METRICS_URL__", $metricsUrl) | Set-Content 'C:\Program Files\Grafana Agent\agent-config.yaml'
+(Get-Content 'C:\Program Files\Grafana Agent\agent-config.yaml').replace("__LOGS_URL__", $logsUrl) | Set-Content 'C:\Program Files\Grafana Agent\agent-config.yaml'
+(Get-Content 'C:\Program Files\Grafana Agent\agent-config.yaml').replace("__PASSWORD__", $password) | Set-Content 'C:\Program Files\Grafana Agent\agent-config.yaml'
 
 echo "`nCreating Services"
 sc.exe failure "Grafana Agent" reset= 86400  actions= restart/60000/restart/60000/restart/60000
@@ -75,7 +103,7 @@ if ($response.Content.StartsWith("Agent is Healthy.")) {
     # Create a new task action
     $healthCheckTaskAction = New-ScheduledTaskAction `
         -Execute 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' `
-        -Argument "& 'C:\Program Files\Grafana Agent\agents-health-check.ps1'"
+        -Argument "& 'C:\Program Files\Grafana Agent\healthcheck\agents-health-check.ps1'"
 
 
     # The name of your scheduled task.
@@ -115,6 +143,10 @@ if ($response.Content.StartsWith("Agent is Healthy.")) {
     
     echo "`nCompleted Installation! Verify Windows metrics are coming in on Grafana"
     echo "Thanks for using OpsVerse ObserveNow"
+}
+
+if($flag -eq $true) {
+    Restart-Service -Name "Grafana Agent"
 }
 
 Read-Host -Prompt "Press Enter to exit"
