@@ -9,14 +9,22 @@ $hostname= Read-Host -Prompt "Enter Unique Hostname"
 $path= "C:\Program Files\Grafana Agent\healthcheck"
 
 $metricsUrl= Read-Host -Prompt "Enter ObserveNow Metrics URL"
+if(!($metricsUrl.StartsWith("https://"))) {
+    $metricsUrl= "https://" + $metricsUrl
+}
+
 if(!($metricsUrl.EndsWith("/api/v1/write"))) {
     $metricsUrl= $metricsUrl + "/api/v1/write"
 }
 
 $logsUrl= Read-Host -Prompt "Enter ObserveNow Logs URL"
+if(!($logsUrl.StartsWith("https://"))) {
+    $logsUrl= "https://" + $logsUrl
+}
+
 if(!($logsUrl.EndsWith("/loki/api/v1/push"))) {
     $logsUrl= $logsUrl + "/loki/api/v1/push"
-} 
+}
 
 $password= Read-Host -Prompt "Enter password"
 
@@ -97,7 +105,7 @@ echo $response.Content
 
 if ($response.Content.StartsWith("Agent is Healthy.")) {
     echo "Installing Task scheduler"
-    
+
     # Create a new task action
     $healthCheckTaskAction = New-ScheduledTaskAction `
         -Execute 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' `
@@ -138,7 +146,7 @@ if ($response.Content.StartsWith("Agent is Healthy.")) {
 
     #Start
     Start-ScheduledTask -TaskName $healthCheckTaskName
-    
+
     echo "`nCompleted Installation! Verify Windows metrics are coming in on Grafana"
     echo "Thanks for using OpsVerse ObserveNow"
 }
