@@ -61,10 +61,12 @@ Start-Sleep -Seconds 10
 cp .\windows_exporter-0.20.0-amd64.exe 'C:\Program Files\Grafana Agent'
 cp .\agent-config.yaml 'C:\Program Files\Grafana Agent\agent-config.yaml'
 cp .\windows-agent-config.yaml 'C:\Program Files\Grafana Agent\windows-agent-config.yaml'
+
 If(!(test-path -PathType container $path))
 {
       New-Item -ItemType Directory -Path $path
 }
+
 cp .\healthcheck\agents-health-check.ps1 'C:\Program Files\Grafana Agent\healthcheck\agents-health-check.ps1'
 
 (Get-Content 'C:\Program Files\Grafana Agent\agent-config.yaml').replace("__HOSTNAME__", $hostname) | Set-Content 'C:\Program Files\Grafana Agent\agent-config.yaml'

@@ -38,7 +38,7 @@ loki:
         - job_name: windows
           windows_events:
             use_incoming_timestamp: false
-            bookmark_path: "./bookmark.xml"
+            bookmark_path: "C:\\Program Files\\Grafana Agent\\bookmark.xml"
             eventlog_name: "Application"
             xpath_query: '*'
             labels:
