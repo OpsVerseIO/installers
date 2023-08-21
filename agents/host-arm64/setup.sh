@@ -113,12 +113,6 @@ function install_agent_config () {
   sed -i "s/__TRACES_HOST__/${TRACES_COLLECTOR_HOST}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
   sed -i "s/__PASSWORD__/${PASS}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
   sed -i "s/__HOST__/${HOSTNAME}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
-
-  if [ "$INCLUDE_BLACKBOX_EXPORTER" == "true" ] ; then
-    sed -i "s#__BLACKBOX_CONFIG__#${DEFAULT_BLACKBOX_SCRAPE_JOB}#g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
-  else
-    sed -i "s/__BLACKBOX_CONFIG__//g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
-  fi
 }
 
 # Ensure target dirs are created
