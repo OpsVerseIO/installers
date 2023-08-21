@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# node_exporter 	This runs the prometheus node exporter
+#
+# chkconfig: 2345 99 01
+# description: Initializes node_exporter
+#
+### BEGIN INIT INFO
+# Provides:          node_exporter
+# Short-Description: Initializes node_exporter
+# Description:       Initializes node_exporter to expose node level metrics
+### END INIT INFO
+
+# Copyright 2022 OpsVerse
+#
+# Based in part on a shell script by
+# Andreas Dilger <adilger@turbolinux.com>  Sep 26, 2001
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+
+usage ()
+{
+	echo $"Usage: $0 {start|stop|status|restart}" 1>&2
+	RETVAL=2
+}
+
+start ()
+{
+	echo $"Starting node_exporter" 1>&2
+	/usr/local/bin/node_exporter >> /var/log/node_exporter.log 2>&1 &
+	touch /var/lock/subsys/node_exporter
+	touch $(pidof node_exporter) > /var/run/node_exporter.pid
+	success $"node_exporter startup"
+	echo
+}
+
+stop ()
+{
+
+	echo $"Stopping node_exporter" 1>&2
+	killproc node_exporter
+	rm -f /var/lock/subsys/node_exporter
+	rm -f /var/run/node_exporter.pid
+	echo
+}
+
+restart ()
+{
+	stop
+	start
+}
+
+case "$1" in
+    stop) stop ;;
+    status)
+	    status node_exporter
+	    ;;
+    start) start ;;
+    restart|reload|force-reload) restart ;;
+    *) usage ;;
+esac
+
+exit $RETVAL

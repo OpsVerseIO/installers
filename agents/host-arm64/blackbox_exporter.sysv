@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# node_exporter 	This runs the prometheus node exporter
+#
+# chkconfig: 2345 99 01
+# description: Initializes blackbox_exporter
+#
+### BEGIN INIT INFO
+# Provides:          blackbox_exporter
+# Short-Description: Initializes blackbox_exporter
+# Description:       Initializes blackbox_exporter to expose blackbox metrics
+### END INIT INFO
+
+# Copyright 2023 OpsVerse
+#
+# Based in part on a shell script by
+# Andreas Dilger <adilger@turbolinux.com>  Sep 26, 2001
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+
+usage ()
+{
+	echo $"Usage: $0 {start|stop|status|restart}" 1>&2
+	RETVAL=2
+}
+
+start ()
+{
+	echo $"Starting blackbox_exporter" 1>&2
+	/usr/local/bin/node_exporter --config.file=/etc/opsverse/blackbox.yaml >> /var/log/blackbox_exporter.log 2>&1 &
+	touch /var/lock/subsys/blackbox_exporter
+	touch $(pidof blackbox_exporter) > /var/run/blackbox_exporter.pid
+	success $"blackbox_exporter startup"
+	echo
+}
+
+stop ()
+{
+
+	echo $"Stopping blackbox_exporter" 1>&2
+	killproc blackbox_exporter
+	rm -f /var/lock/subsys/blackbox_exporter
+	rm -f /var/run/blackbox_exporter.pid
+	echo
+}
+
+restart ()
+{
+	stop
+	start
+}
+
+case "$1" in
+    stop) stop ;;
+    status)
+	    status blackbox_exporter
+	    ;;
+    start) start ;;
+    restart|reload|force-reload) restart ;;
+    *) usage ;;
+esac
+
+exit $RETVAL

@@ -1,0 +1,10 @@
+[Unit]
+Description=Prometheus Blackbox Exporter
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/blackbox_exporter --config.file=/etc/opsverse/blackbox.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
