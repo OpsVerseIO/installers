@@ -14,7 +14,6 @@ prometheus:
               regex: '.*'
               target_label: instance
               replacement: __HOST__
-        __BLACKBOX_CONFIG__
       remote_write:
         - url: https://__METRICS_HOST__/api/v1/write
           basic_auth:

@@ -22,27 +22,8 @@ NODE_EXPORTER_SERVICE_NAME=node_exporter
 NODE_EXPORTER_SERVICE_FILE=/etc/systemd/system/${NODE_EXPORTER_SERVICE_NAME}.service
 NODE_EXPORTER_SYSV_SERVICE_FILE=/etc/init.d/${NODE_EXPORTER_SERVICE_NAME}
 
-BLACKBOX_SERVICE_NAME=blackbox_exporter
-BLACKBOX_SERVICE_FILE=/etc/systemd/system/${BLACKBOX_SERVICE_NAME}.service
-BLACKBOX_SYSV_SERVICE_FILE=/etc/init.d/${BLACKBOX_SERVICE_NAME}
-
 ETC_OPSVERSE="/etc/opsverse"
 OPSVERSE_AGENT_CONFIG_FULLPATH=${ETC_OPSVERSE}/agent-config.yaml
-BLACKBOX_EXPORTER_CONFIG_FULLPATH=${ETC_OPSVERSE}/blackbox.yaml
-DEFAULT_BLACKBOX_SCRAPE_JOB="- job_name: 'blackbox'\\
-          metrics_path: /probe\\
-          params:\\
-            module: [http_2xx]\\
-          static_configs:\\
-            - targets:\\
-              - http://opsverse.io\\
-          relabel_configs:\\
-            - source_labels: [__address__]\\
-              target_label: __param_target\\
-            - source_labels: [__param_target]\\
-              target_label: instance\\
-            - target_label: __address__\\
-              replacement: 127.0.0.1:9115"
 
 # Parse CLI args
 while [[ $# -gt 0 ]]; do
@@ -75,10 +56,6 @@ while [[ $# -gt 0 ]]; do
       NO_CONFIG_OVERRIDE=true
       shift # past argument
       ;;
-    --include_blackbox_exporter)
-      INCLUDE_BLACKBOX_EXPORTER=true
-      shift # past argument
-      ;;
     --help)
       HELP=true
       shift # past argument
@@ -106,7 +83,6 @@ if [ "$HELP" = true ] || [ -z $METRICS_HOST ] || [ -z $LOGS_HOST ] || [ -z $PASS
   echo "  --no-config-override           If you already have an existing /etc/config/agent-config.yaml,"
   echo "                                 this option will use that instead of prompting to choose. If"
   echo "                                 used with -f, this option (--no-config-override) will take priority"
-  echo "  --include_blackbox_exporter    Install blackbox exporter module alongside opsverse agent"
   echo ""
   echo "Example:"
   echo "  sudo installer -- -m metrics-foobar.mysubdomain.com \\"
@@ -143,10 +119,6 @@ function install_agent_config () {
   else
     sed -i "s/__BLACKBOX_CONFIG__//g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
   fi
-}
-
-function install_blackbox_config () {
-  cp -f ./blackbox.yaml ${BLACKBOX_EXPORTER_CONFIG_FULLPATH}
 }
 
 # Ensure target dirs are created
@@ -196,59 +168,13 @@ else
   install_agent_config
 fi
 
-if [ "$INCLUDE_BLACKBOX_EXPORTER" == "true" ] ; then
-
-  if [ -f ${BLACKBOX_EXPORTER_CONFIG_FULLPATH} ] ; then
-    echo "A blackbox exporter config at ${BLACKBOX_EXPORTER_CONFIG_FULLPATH} already exists..."
-
-    if [ "$NO_CONFIG_OVERRIDE" == "true" ] ; then
-      echo "--no-config-override option passed, so we'll use the existing ${BLACKBOX_EXPORTER_CONFIG_FULLPATH} ..."
-    else
-      if [ "$FORCE_CONFIG_OVERRIDE" != "true" ] ; then
-        while true ; do
-          echo ""
-          echo "There is already an existing agent config at ${BLACKBOX_EXPORTER_CONFIG_FULLPATH}."
-          echo "Please select one of the following options:"
-          echo " (o) - to (o)verride it with the defaults"
-          echo " (e) - to use the (e)xisting config"
-          echo " (v) - to (v)iew the diff"
-          read -p "Enter option: " oev
-          case $oev in
-            o)
-              echo "Using a default blackbox config file..."
-              install_blackbox_config
-              break
-              ;;
-            e)
-              echo "Using existing q${BLACKBOX_EXPORTER_CONFIG_FULLPATH}..."
-              break
-              ;;
-            v)
-              diff ${BLACKBOX_EXPORTER_CONFIG_FULLPATH} ./blackbox.yaml
-              ;;
-            *)
-              echo "Invalid choice..."
-              ;;
-          esac
-        done
-      else
-        echo "--force-config-override option passed, so we'll use a default blackbox config file..."
-        install_blackbox_config
-      fi
-    fi
-  else
-    install_blackbox_config
-  fi
-fi
 
 # move executable and config to appropriate directories
 cp -f ./grafana-agent-linux-arm64 /usr/local/bin/opsverse-telemetry-agent
 cp -f ./node_exporter /usr/local/bin/node_exporter
-cp -f ./blackbox_exporter-0.24.0.linux-arm64 /usr/local/bin/blackbox_exporter
 cp -f ./targets-node-exporter.json ${ETC_OPSVERSE}/targets/node-exporter.json
 chmod +x /usr/local/bin/opsverse-telemetry-agent
 chmod +x /usr/local/bin/node_exporter
-chmod +x /usr/local/bin/blackbox_exporter
 
 if [ -f /lib/systemd/systemd ]; then
   # Setup the systemd service file
@@ -269,21 +195,6 @@ if [ -f /lib/systemd/systemd ]; then
     cp -f ${NODE_EXPORTER_SERVICE_FILE} /tmp
   fi
   cp -f ./${NODE_EXPORTER_SERVICE_NAME}.service ${NODE_EXPORTER_SERVICE_FILE}
-
-  if [ "$INCLUDE_BLACKBOX_EXPORTER" == "true" ] ; then
-    if [ -f ${BLACKBOX_SERVICE_FILE} ]; then
-      systemctl stop ${BLACKBOX_SERVICE_NAME}.service
-      systemctl disable ${BLACKBOX_SERVICE_NAME}.service
-
-      echo "Backing up existing service (${BLACKBOX_SERVICE_FILE}) file to /tmp"
-      cp -f ${BLACKBOX_SERVICE_FILE} /tmp
-    fi
-    cp -f ./${BLACKBOX_SERVICE_NAME}.service ${BLACKBOX_SERVICE_FILE}
-
-    # opsverse-agent service
-    systemctl enable ${BLACKBOX_SERVICE_NAME}.service
-    systemctl start ${BLACKBOX_SERVICE_NAME}.service
-  fi
 
   # opsverse-agent service
   systemctl enable ${SERVICE_NAME}.service
