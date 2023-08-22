@@ -1,6 +1,14 @@
-prometheus:
+server:
+  log_level: info
+
+metrics:
   global:
     scrape_interval: 30s
+    remote_write:
+      - url: https://__METRICS_HOST__/api/v1/write
+        basic_auth:
+          username: devopsnow
+          password: __PASSWORD__
   wal_directory: /tmp/wal/
   configs:
     - name: default
@@ -14,26 +22,22 @@ prometheus:
               regex: '.*'
               target_label: instance
               replacement: __HOST__
-      remote_write:
-        - url: https://__METRICS_HOST__/api/v1/write
-          basic_auth:
-            username: devopsnow
-            password: __PASSWORD__
 
-loki:
-  positions_directory: /tmp/
+logs:
   configs:
-    - name: local
-      clients:
-        - url: https://__LOGS_HOST__/loki/api/v1/push
-          basic_auth:
-            username: devopsnow
-            password: __PASSWORD__
-      scrape_configs:
-        # Add a job for any new dir that needs to be tailed for logs
-        - job_name: var-log
-          static_configs:
-            - labels:
-                job: varlog
-                host: __HOST__
-                __path__: /var/log/*.log
+  - name: default
+    positions:
+      filename: /tmp/positions.yaml
+    scrape_configs:
+      # Add a job for any new dir that needs to be tailed for logs
+      - job_name: var-log
+        static_configs:
+          - labels:
+              job: varlog
+              host: __HOST__
+              __path__: /var/log/*.log
+    clients:
+      - url: https://__LOGS_HOST__/loki/api/v1/push
+        basic_auth:
+          username: devopsnow
+          password: __PASSWORD__
