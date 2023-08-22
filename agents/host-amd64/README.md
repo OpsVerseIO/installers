@@ -2,11 +2,18 @@
 
 ## Prereq
 
-On your machine, make sure you have [Makeself](https://makeself.io) installed
+On your machine, make sure you have [Makeself](https://makeself.io) and `unzip` installed
 
 e.g.,
 ```
-$ sudo apt install makeself
+$ sudo apt install makeself unzip
+```
+
+## Unzip the Agent zip file
+The zip file has been included to avoid needing git-lfs for large executable size
+
+```
+unzip grafana-agent-v0.34.0-linux-amd64.zip && rm grafana-agent-v0.34.0-linux-amd64.zip
 ```
 
 ## Creating the bundle

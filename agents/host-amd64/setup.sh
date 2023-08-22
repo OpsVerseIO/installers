@@ -163,7 +163,7 @@ else
 fi
 
 # move executable and config to appropriate directories
-cp -f ./agent-v0.13.1-linux-amd64 /usr/local/bin/opsverse-telemetry-agent
+cp -f ./grafana-agent-linux-amd64 /usr/local/bin/opsverse-telemetry-agent
 cp -f ./node_exporter /usr/local/bin/node_exporter
 cp -f ./targets-node-exporter.json ${ETC_OPSVERSE}/targets/node-exporter.json
 chmod +x /usr/local/bin/opsverse-telemetry-agent
