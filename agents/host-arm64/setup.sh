@@ -108,8 +108,11 @@ function install_agent_config () {
   # Replace variables in agent config file
   HOSTNAME=$(hostname)
   B64PASS=$(echo -n "devopsnow:${PASS}" | base64)
+  METRICS_HOST=$(echo "${METRICS_HOST}" | sed -E 's~^https?://~~;s~/api/v1/write~~')
   sed -i "s/__METRICS_HOST__/${METRICS_HOST}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
+  LOGS_HOST=$(echo "${LOGS_HOST}" | sed -E 's~^https?://~~;s~/loki/api/v1/push~~')
   sed -i "s/__LOGS_HOST__/${LOGS_HOST}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
+  TRACES_COLLECTOR_HOST=$(echo "${TRACES_COLLECTOR_HOST}" | sed -E 's~^https?://~~;s~/api/v2/spans~~')
   sed -i "s/__TRACES_HOST__/${TRACES_COLLECTOR_HOST}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
   sed -i "s/__PASSWORD__/${PASS}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
   sed -i "s/__HOST__/${HOSTNAME}/g" ${OPSVERSE_AGENT_CONFIG_FULLPATH}
