@@ -18,7 +18,7 @@ metrics:
           relabel_configs:
             - source_labels: [__address__]
               regex: '.*'
-              target_label: instance
+              target_label: node
               replacement: ${HOST}
         - job_name: cadvisor
           static_configs:
@@ -27,7 +27,7 @@ metrics:
           relabel_configs:
             - source_labels: [__address__]
               regex: '.*'
-              target_label: instance
+              target_label: node
               replacement: ${HOST}
         # - job_name: mysqld-exporter
         #   static_configs:
@@ -36,7 +36,7 @@ metrics:
         #   relabel_configs:
         #     - source_labels: [__address__]
         #       regex: '.*'
-        #       target_label: instance
+        #       target_label: node
         #       replacement: ${HOST} 
 
 logs:

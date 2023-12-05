@@ -20,7 +20,7 @@ metrics:
           relabel_configs:
             - source_labels: [__address__]
               regex: '.*'
-              target_label: instance
+              target_label: node
               replacement: __HOST__
 
 logs:
