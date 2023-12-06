@@ -18,6 +18,10 @@ metrics:
           relabel_configs:
             - source_labels: [__address__]
               regex: '.*'
+              target_label: instance
+              replacement: ${HOST}
+            - source_labels: [__address__]
+              regex: '.*'
               target_label: node
               replacement: ${HOST}
         - job_name: cadvisor
@@ -27,6 +31,10 @@ metrics:
           relabel_configs:
             - source_labels: [__address__]
               regex: '.*'
+              target_label: instance
+              replacement: ${HOST}
+            - source_labels: [__address__]
+              regex: '.*'
               target_label: node
               replacement: ${HOST}
         # - job_name: mysqld-exporter
@@ -34,6 +42,10 @@ metrics:
         #   - targets:
         #     - 'mysqld-exporter:9104'
         #   relabel_configs:
+        #     - source_labels: [__address__]
+        #       regex: '.*'
+        #       target_label: instance
+        #       replacement: ${HOST} 
         #     - source_labels: [__address__]
         #       regex: '.*'
         #       target_label: node
