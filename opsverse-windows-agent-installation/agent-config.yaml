@@ -13,6 +13,10 @@ prometheus:
               regex: '.*'
               target_label: instance
               replacement: __HOSTNAME__
+            - source_labels: [__address__]
+              regex: '.*'
+              target_label: node
+              replacement: __HOSTNAME__
       remote_write:
         - url: __METRICS_URL__
           basic_auth:

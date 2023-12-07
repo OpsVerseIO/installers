@@ -22,6 +22,10 @@ metrics:
               regex: '.*'
               target_label: instance
               replacement: __HOST__
+            - source_labels: [__address__]
+              regex: '.*'
+              target_label: node
+              replacement: __HOST__
 
 logs:
   configs:

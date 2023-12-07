@@ -20,6 +20,10 @@ metrics:
               regex: '.*'
               target_label: instance
               replacement: ${HOST}
+            - source_labels: [__address__]
+              regex: '.*'
+              target_label: node
+              replacement: ${HOST}
         - job_name: cadvisor
           static_configs:
           - targets:
@@ -29,6 +33,10 @@ metrics:
               regex: '.*'
               target_label: instance
               replacement: ${HOST}
+            - source_labels: [__address__]
+              regex: '.*'
+              target_label: node
+              replacement: ${HOST}
         # - job_name: mysqld-exporter
         #   static_configs:
         #   - targets:
@@ -37,6 +45,10 @@ metrics:
         #     - source_labels: [__address__]
         #       regex: '.*'
         #       target_label: instance
+        #       replacement: ${HOST} 
+        #     - source_labels: [__address__]
+        #       regex: '.*'
+        #       target_label: node
         #       replacement: ${HOST} 
 
 logs:
