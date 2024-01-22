@@ -5,7 +5,8 @@ OpsVerse supports the usage of custom private container registry to host the con
 * Use an updated version of `image-override-values.yaml` in the `helm install` command to refer to your private registry
 
 ## Pushing images to the private registry
-
+* export CONTAINER_TARGET_REGISTRY=<your ECR registry>
+* `./image-pull-push.sh`
 
 ## K8s Helm Image Override
 The `image-override-values.yaml` file can be used to override the default registry path of docker images with a custom registry path.
