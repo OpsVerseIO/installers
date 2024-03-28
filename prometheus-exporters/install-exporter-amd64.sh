@@ -177,16 +177,17 @@ function download_exporter () {
   fi
 
   if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
-    EXPORTER_VERSION="0.34.0"
-    EXPORTER_BASE_NAME="otelcontribcol_linux_amd64"
-    EXPORTER_DL_URL="https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}"
+    EXPORTER_VERSION="0.92.0"
+    EXPORTER_BASE_NAME="otelcol-contrib_0.92.0_linux_amd64"
+    EXPORTER_DL_URL="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
 
     wget ${EXPORTER_DL_URL}
-    mv ${EXPORTER_BASE_NAME} /usr/local/bin/opsverse-otelcontribcol
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    mv otelcol-contrib /usr/local/bin/opsverse-otelcontribcol
     chmod +x /usr/local/bin/opsverse-otelcontribcol
 
     # cleanup what was downloaded
-    rm -rf ${EXPORTER_BASE_NAME}*
+    rm -rf ${EXPORTER_BASE_NAME}* LICENSE README.md
   fi
 
   if [ "$EXPORTER" == "vmware" ]; then
