@@ -397,10 +397,16 @@ extensions:
 exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"
+  prometheusremotewrite:
+    endpoint: "${METRICS_COLLECTOR_ENDPOINT}"
+    tls:
+      insecure: true
+    headers:
+      'Authorization': 'Basic ${COLLECTOR_B64_AUTH}'
   zipkin:
     endpoint: "${TRACE_COLLECTOR_URL}"
     headers:
-      'Authorization': 'Basic ${TRACE_COLLECTOR_B64_AUTH}'
+      'Authorization': 'Basic ${COLLECTOR_B64_AUTH}'
 service:
   extensions: [health_check, zpages]
   pipelines:
@@ -415,6 +421,10 @@ service:
       # Added to pass validation requiring at least one receiver in a pipeline.
       receivers: [otlp/spanmetrics]
       exporters: [prometheus]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheusremotewrite]
 EOF
   fi
 
