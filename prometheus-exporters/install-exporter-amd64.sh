@@ -315,6 +315,21 @@ EOF
     COLLECTOR_B64_AUTH=$(echo -n "${COLLECTOR_USER}:${COLLECTOR_PASS}" | base64)
     INSTANCE=$(hostname)
 
+    if [[ ! $METRICS_COLLECTOR_URL =~ ^http ]]; then
+      # Prepend http://
+      METRICS_COLLECTOR_ENDPOINT="https://${METRICS_COLLECTOR_URL}"
+    else
+      # URL already starts with http, copy it
+      METRICS_COLLECTOR_ENDPOINT="$METRICS_COLLECTOR_URL"
+    fi
+
+    # Check if the URL ends with /api/v1/write
+    if [[ ! $METRICS_COLLECTOR_ENDPOINT =~ /api\/v1\/write$ ]]; then
+      # Append /api/v1/write
+      METRICS_COLLECTOR_ENDPOINT="${METRICS_COLLECTOR_ENDPOINT}/api/v1/write"
+    fi
+
+
     cat << EOF > /etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml
 receivers:
   otlp:
