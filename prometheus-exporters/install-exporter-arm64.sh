@@ -377,8 +377,6 @@ processors:
       # - span.kind
       # - status.code
   memory_limiter:
-    # Same as --mem-ballast-size-mib CLI argument
-    ballast_size_mib: 683
     # 80% of maximum memory up to 2G
     limit_mib: 1500
     # 25% of limit up to 2G
