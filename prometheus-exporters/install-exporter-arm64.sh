@@ -37,13 +37,18 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
-    -u|--trace-collector-user)
-      TRACE_COLLECTOR_USER="$2"
+    -m|--metrics-collector-url)
+      METRICS_COLLECTOR_URL="$2"
       shift # past argument
       shift # past value
       ;;
-    -p|--trace-collector-pass)
-      TRACE_COLLECTOR_PASS="$2"
+    -u|--collector-user)
+      COLLECTOR_USER="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -p|--collector-pass)
+      COLLECTOR_PASS="$2"
       shift # past argument
       shift # past value
       ;;
@@ -272,33 +277,41 @@ EOF
       echo "==============="
       read -p "Enter the traces collector URL (e.g., https://jane-doe.opsverse.cloud/api/v2/spans): " TRACE_COLLECTOR_URL
     fi
-    if [ -z $TRACE_COLLECTOR_USER ]; then
+    if [ -z $METRICS_COLLECTOR_URL ]; then
       echo "==============="
-      echo "No user for your traces collector endpoint was passed in."
+      echo "No metrics collector URL was passed in."
+      echo "You can get this via the OpsVerse Admin Console:"
+      echo "  'Integrations' > 'URLs and Integrations' > 'Victoria Metrics'"
+      echo "==============="
+      read -p "Enter the metrics collector URL (e.g., https://jane-doe.opsverse.cloud/api/v1/write): " METRICS_COLLECTOR_URL
+    fi
+    if [ -z $COLLECTOR_USER ]; then
+      echo "==============="
+      echo "No user for your opsverse collector was passed in."
       echo "You can get this via the OpsVerse Admin Console:"
       echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
       echo "==============="
-      read -p "Enter the traces collector user (e.g., devopsnow): " TRACE_COLLECTOR_USER
+      read -p "Enter the OpsVerse collector user (e.g., devopsnow): " COLLECTOR_USER
     fi
-    if [ -z $TRACE_COLLECTOR_PASS ]; then
+    if [ -z $COLLECTOR_PASS ]; then
       echo "==============="
-      echo "No password for your traces collector endpoint was passed in. You can get this via the OpsVerse Admin Console:"
+      echo "No password for your opsverse collector was passed in. You can get this via the OpsVerse Admin Console:"
       echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
       echo "==============="
-      read -p "Enter the traces collector password: " TRACE_COLLECTOR_PASS
+      read -p "Enter the OpsVerse collector password: " COLLECTOR_PASS
     fi
 
     # Piping from curl to bash may not allow 'read' to read from stdin, so make sure to have this check
     # to prompt user to enter details via CLI
-    if [ -z $TRACE_COLLECTOR_URL ] || [ -z $TRACE_COLLECTOR_USER ] || [ -z $TRACE_COLLECTOR_PASS ]; then
+    if [ -z $TRACE_COLLECTOR_URL ]  || [ -z $METRICS_COLLECTOR_URL ] || [ -z $COLLECTOR_USER ] || [ -z $COLLECTOR_PASS ]; then
       echo ""
-      echo "Please enter the trace collector URL, username, and password (details above) via the command-line"
-      echo "  using the '-t', '-u', and '-p' flags, respectively"
+      echo "Please enter the trace collector URL, metrics collector url, username, and password (details above) via the command-line"
+      echo "  using the '-t', '-m, '-u', and '-p' flags, respectively"
 
       exit 1
     fi
 
-    TRACE_COLLECTOR_B64_AUTH=$(echo -n "${TRACE_COLLECTOR_USER}:${TRACE_COLLECTOR_PASS}" | base64)
+    COLLECTOR_B64_AUTH=$(echo -n "${COLLECTOR_USER}:${COLLECTOR_PASS}" | base64)
     INSTANCE=$(hostname)
 
     cat << EOF > /etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml
