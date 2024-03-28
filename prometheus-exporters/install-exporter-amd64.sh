@@ -37,13 +37,18 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
-    -u|--trace-collector-user)
-      TRACE_COLLECTOR_USER="$2"
+    -m|--metrics-collector-url)
+      METRICS_COLLECTOR_URL="$2"
       shift # past argument
       shift # past value
       ;;
-    -p|--trace-collector-pass)
-      TRACE_COLLECTOR_PASS="$2"
+    -u|--collector-user)
+      COLLECTOR_USER="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -p|--collector-pass)
+      COLLECTOR_PASS="$2"
       shift # past argument
       shift # past value
       ;;
@@ -172,16 +177,17 @@ function download_exporter () {
   fi
 
   if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
-    EXPORTER_VERSION="0.34.0"
-    EXPORTER_BASE_NAME="otelcontribcol_linux_amd64"
-    EXPORTER_DL_URL="https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}"
+    EXPORTER_VERSION="0.92.0"
+    EXPORTER_BASE_NAME="otelcol-contrib_0.92.0_linux_amd64"
+    EXPORTER_DL_URL="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
 
     wget ${EXPORTER_DL_URL}
-    mv ${EXPORTER_BASE_NAME} /usr/local/bin/opsverse-otelcontribcol
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    mv otelcol-contrib /usr/local/bin/opsverse-otelcontribcol
     chmod +x /usr/local/bin/opsverse-otelcontribcol
 
     # cleanup what was downloaded
-    rm -rf ${EXPORTER_BASE_NAME}*
+    rm -rf ${EXPORTER_BASE_NAME}* LICENSE README.md
   fi
 
   if [ "$EXPORTER" == "vmware" ]; then
@@ -272,34 +278,57 @@ EOF
       echo "==============="
       read -p "Enter the traces collector URL (e.g., https://jane-doe.opsverse.cloud/api/v2/spans): " TRACE_COLLECTOR_URL
     fi
-    if [ -z $TRACE_COLLECTOR_USER ]; then
+    if [ -z $METRICS_COLLECTOR_URL ]; then
       echo "==============="
-      echo "No user for your traces collector endpoint was passed in."
+      echo "No metrics collector URL was passed in."
+      echo "You can get this via the OpsVerse Admin Console:"
+      echo "  'Integrations' > 'URLs and Integrations' > 'Victoria Metrics'"
+      echo "==============="
+      read -p "Enter the metrics collector URL (e.g., https://jane-doe.opsverse.cloud/api/v1/write): " METRICS_COLLECTOR_URL
+    fi
+    if [ -z $COLLECTOR_USER ]; then
+      echo "==============="
+      echo "No user for your opsverse collector was passed in."
       echo "You can get this via the OpsVerse Admin Console:"
       echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
       echo "==============="
-      read -p "Enter the traces collector user (e.g., devopsnow): " TRACE_COLLECTOR_USER
+      read -p "Enter the OpsVerse collector user (e.g., devopsnow): " COLLECTOR_USER
     fi
-    if [ -z $TRACE_COLLECTOR_PASS ]; then
+    if [ -z $COLLECTOR_PASS ]; then
       echo "==============="
-      echo "No password for your traces collector endpoint was passed in. You can get this via the OpsVerse Admin Console:"
+      echo "No password for your opsverse collector was passed in. You can get this via the OpsVerse Admin Console:"
       echo "  'Integrations' > 'URLs and Integrations' > 'Jaeger'"
       echo "==============="
-      read -p "Enter the traces collector password: " TRACE_COLLECTOR_PASS
+      read -p "Enter the OpsVerse collector password: " COLLECTOR_PASS
     fi
 
     # Piping from curl to bash may not allow 'read' to read from stdin, so make sure to have this check
     # to prompt user to enter details via CLI
-    if [ -z $TRACE_COLLECTOR_URL ] || [ -z $TRACE_COLLECTOR_USER ] || [ -z $TRACE_COLLECTOR_PASS ]; then
+    if [ -z $TRACE_COLLECTOR_URL ]  || [ -z $METRICS_COLLECTOR_URL ] || [ -z $COLLECTOR_USER ] || [ -z $COLLECTOR_PASS ]; then
       echo ""
-      echo "Please enter the trace collector URL, username, and password (details above) via the command-line"
-      echo "  using the '-t', '-u', and '-p' flags, respectively"
+      echo "Please enter the trace collector URL, metrics collector url, username, and password (details above) via the command-line"
+      echo "  using the '-t', '-m, '-u', and '-p' flags, respectively"
 
       exit 1
     fi
 
-    TRACE_COLLECTOR_B64_AUTH=$(echo -n "${TRACE_COLLECTOR_USER}:${TRACE_COLLECTOR_PASS}" | base64)
+    COLLECTOR_B64_AUTH=$(echo -n "${COLLECTOR_USER}:${COLLECTOR_PASS}" | base64)
     INSTANCE=$(hostname)
+
+    if [[ ! $METRICS_COLLECTOR_URL =~ ^http ]]; then
+      # Prepend http://
+      METRICS_COLLECTOR_ENDPOINT="https://${METRICS_COLLECTOR_URL}"
+    else
+      # URL already starts with http, copy it
+      METRICS_COLLECTOR_ENDPOINT="$METRICS_COLLECTOR_URL"
+    fi
+
+    # Check if the URL ends with /api/v1/write
+    if [[ ! $METRICS_COLLECTOR_ENDPOINT =~ /api\/v1\/write$ ]]; then
+      # Append /api/v1/write
+      METRICS_COLLECTOR_ENDPOINT="${METRICS_COLLECTOR_ENDPOINT}/api/v1/write"
+    fi
+
 
     cat << EOF > /etc/opsverse/exporters/opsverse-otelcontribcol/config.yaml
 receivers:
@@ -349,8 +378,6 @@ processors:
       # - span.kind
       # - status.code
   memory_limiter:
-    # Same as --mem-ballast-size-mib CLI argument
-    ballast_size_mib: 683
     # 80% of maximum memory up to 2G
     limit_mib: 1500
     # 25% of limit up to 2G
@@ -370,10 +397,16 @@ extensions:
 exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"
+  prometheusremotewrite:
+    endpoint: "${METRICS_COLLECTOR_ENDPOINT}"
+    tls:
+      insecure: true
+    headers:
+      'Authorization': 'Basic ${COLLECTOR_B64_AUTH}'
   zipkin:
     endpoint: "${TRACE_COLLECTOR_URL}"
     headers:
-      'Authorization': 'Basic ${TRACE_COLLECTOR_B64_AUTH}'
+      'Authorization': 'Basic ${COLLECTOR_B64_AUTH}'
 service:
   extensions: [health_check, zpages]
   pipelines:
@@ -388,6 +421,10 @@ service:
       # Added to pass validation requiring at least one receiver in a pipeline.
       receivers: [otlp/spanmetrics]
       exporters: [prometheus]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheusremotewrite]
 EOF
   fi
 
