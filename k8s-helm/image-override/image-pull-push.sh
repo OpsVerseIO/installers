@@ -37,7 +37,7 @@ do
             docker pull "$SOURCE_REGISTRY/$registryRepo/$image"
 
             # Retag the image for the target registry
-            docker tag "$SOURCE_REGISTRY/$registryRepo/$image" "$TARGET_REGISTRY/opsverse/$image"
+            docker tag "$SOURCE_REGISTRY/$registryRepo/$image" "$TARGET_REGISTRY/$image"
 
             # Check if the repository exists
             repository_info=$(aws ecr describe-repositories --repository-name "$imageRepo" --region "$CONTAINER_REGION" 2>/dev/null)

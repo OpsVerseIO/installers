@@ -1,3 +1,3 @@
-grafana-alert-sidecar:6be5417b
-backup-utils:2bad5288
+devopsnowinc/grafana-alert-sidecar:6be5417b
+devopsnowinc/backup-utils:2bad5288
 devopsnowinc/backstage-inhouse:65d41f73
