@@ -59,3 +59,9 @@ busybox:latest
 argoproj/argocd:v2.9.3
 redis:7.0.13-alpine
 bitnami/sealed-secrets-controller:v0.15.0
+ingress-nginx/kube-webhook-certgen:v20231011-8b53cabe0
+ingress-nginx/controller:v1.9.5
+victoriametrics/operator:v0.35.1
+altinity/metrics-exporter:0.18.5
+altinity/clickhouse-operator:0.18.5
+jaegertracing/jaeger-operator:1.20.0
