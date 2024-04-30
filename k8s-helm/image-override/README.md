@@ -7,6 +7,12 @@ OpsVerse supports the usage of custom private container registry to host the con
 ## Pushing images to the private registry
 
 * Ensure that you have the authentication done for both the Opsverse Registry from where the images will be pulled and the Private Registry where the images will be pushed.
+
+For authenticating on the Opsverse Harbor Registry use the following command - 
+`docker login registry.devopsnow.io/private`
+`docker login registry.devopsnow.io/public`
+Login for both the `private` and `public` directory.
+
 For authenticating on Private ECR registry use the following command - 
 `aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.<region>.amazonaws.com`
 
@@ -15,7 +21,8 @@ export CONTAINER_TARGET_REGISTRY=<aws_account_id>.dkr.ecr.<region>.amazonaws.com
 export CONTAINER_REGION=<region>
 
 * Run the image-pull-push.sh script file 
-sh <location_of_script_file>
+sh image-pull-push.sh
+NOTE - If you encounter any error with the above command, use bash to execute the image-pull-push.sh
 
 ## K8s Helm Image Override
 The `image-override-values.yaml` file can be used to override the default registry path of docker images with a custom registry path.
