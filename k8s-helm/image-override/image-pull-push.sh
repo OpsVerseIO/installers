@@ -20,6 +20,7 @@ fi
 
 
 CONFIG_FILES=("public_images.txt" "private_images.txt" "internal_images.txt")
+REPOSITORY_PREFIX="corcentric-opsverse"
 
 for FILE in "${CONFIG_FILES[@]}"; 
 do
@@ -37,20 +38,20 @@ do
             docker pull "$SOURCE_REGISTRY/$registryRepo/$image"
 
             # Retag the image for the target registry
-            docker tag "$SOURCE_REGISTRY/$registryRepo/$image" "$TARGET_REGISTRY/$image"
+            docker tag "$SOURCE_REGISTRY/$registryRepo/$image" "$TARGET_REGISTRY/$REPOSITORY_PREFIX/$image"
 
             # Check if the repository exists
-            repository_info=$(aws ecr describe-repositories --repository-name "$imageRepo" --region "$CONTAINER_REGION" 2>/dev/null)
+            repository_info=$(aws ecr describe-repositories --repository-name "$REPOSITORY_PREFIX/$imageRepo" --region "$CONTAINER_REGION" 2>/dev/null)
             if [ -z "$repository_info" ]; then
                 # Repository does not exist, create it
-                aws ecr create-repository --repository-name "$imageRepo" --region "$CONTAINER_REGION" --output text --image-scanning-configuration scanOnPush=true
+                aws ecr create-repository --repository-name "$REPOSITORY_PREFIX/$imageRepo" --region "$CONTAINER_REGION" --output text --image-scanning-configuration scanOnPush=true
                 echo "Repository '$imageRepo' created."
             else
-                echo "Repository '$imageRepo' already exists. Skipping creation."
+                echo "Repository '$REPOSITORY_PREFIX/$imageRepo' already exists. Skipping creation."
             fi
 
             # Push the image to the target registry
-            docker push "$TARGET_REGISTRY/$image"
+            docker push "$TARGET_REGISTRY/$REPOSITORY_PREFIX/$image"
         done < "$FILE"
     fi
 done
