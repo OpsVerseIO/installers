@@ -63,6 +63,5 @@ ingress-nginx/controller:v1.9.5
 victoriametrics/operator:v0.35.1
 altinity/metrics-exporter:0.18.5
 altinity/clickhouse-operator:0.18.5
-jaegertracing/jaeger-operator:1.20.0
 amazon/aws-cli:latest
 bitnami/kubectl:1.30.0-debian-12-r0
