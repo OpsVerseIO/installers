@@ -6,6 +6,7 @@ SOURCE_REGISTRY="registry.devopsnow.io"
 # Target registry from environment variable or command line argument
 TARGET_REGISTRY="${CONTAINER_TARGET_REGISTRY:-$1}"
 CONTAINER_REGION="${CONTAINER_REGION:-$1}"
+REPOSITORY_PREFIX="${REPOSITORY_PREFIX:-$1}"
 
 # Check if the target registry and container region is provided
 if [ -z "$TARGET_REGISTRY" ]; then
@@ -17,10 +18,14 @@ if [ -z "$CONTAINER_REGION" ]; then
     echo "Error: Target container region is not specified."
     exit 1
 fi
+if [ -z "$REPOSITORY_PREFIX" ]; then
+    echo "Error: REPOSITORY_PREFIX is not specified."
+    exit 1
+fi
 
 
 CONFIG_FILES=("public_images.txt" "private_images.txt" "internal_images.txt")
-REPOSITORY_PREFIX="corcentric-opsverse"
+
 
 for FILE in "${CONFIG_FILES[@]}"; 
 do
@@ -45,7 +50,7 @@ do
             if [ -z "$repository_info" ]; then
                 # Repository does not exist, create it
                 aws ecr create-repository --repository-name "$REPOSITORY_PREFIX/$imageRepo" --region "$CONTAINER_REGION" --output text --image-scanning-configuration scanOnPush=true
-                echo "Repository '$imageRepo' created."
+                echo "Repository '$REPOSITORY_PREFIX/$imageRepo' created."
             else
                 echo "Repository '$REPOSITORY_PREFIX/$imageRepo' already exists. Skipping creation."
             fi
