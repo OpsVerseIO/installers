@@ -19,9 +19,9 @@ For authenticating on Private ECR registry use the following command -
 * Export the CONTAINER_TARGET_REGISTRY and CONTAINER_REGION in the terminal as follows - 
 export CONTAINER_TARGET_REGISTRY=<aws_account_id>.dkr.ecr.<region>.amazonaws.com
 export CONTAINER_REGION=<region>
-export REPOSITORY_PREFIX=<your-repository-prefix>
+export REPOSITORY_PREFIX=<your-repository-prefix>_opsverse
 
-* You can also add a repository prefix that will be appended to your repositoryg name. To do this, just change the variable string name "REPOSITORY_PREFIX" present in the script as follows - 
+* You need to add a repository prefix that will be appended to your repository name. To do this, just export "REPOSITORY_PREFIX" as mentioned above 
 
 * Run the image-pull-push.sh script file 
 sh image-pull-push.sh
