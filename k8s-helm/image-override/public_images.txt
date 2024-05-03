@@ -25,7 +25,6 @@ victoriametrics/vmselect:v1.87.14-cluster
 victoriametrics/vmstorage:v1.87.14-cluster
 bats/bats:1.8.0
 bitnami/os-shell:12-debian-12-r18
-busybox:latest
 argoproj/argocd:v2.9.14
 dexidp/dex:v2.38.0
 redis:7.0.13-alpine
@@ -53,8 +52,6 @@ open-telemetry/opentelemetry-operator/autoinstrumentation-dotnet:0.5.0
 open-telemetry/opentelemetry-operator/autoinstrumentation-java:1.21.0
 open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.34.0
 open-telemetry/opentelemetry-operator/autoinstrumentation-python:0.36b0
-busybox:latest
-redis:7.0.13-alpine
 bitnami/sealed-secrets-controller:v0.15.0
 ingress-nginx/kube-webhook-certgen:v20231011-8b53cabe0
 ingress-nginx/controller:v1.9.5
@@ -63,3 +60,7 @@ altinity/metrics-exporter:0.24.0
 altinity/clickhouse-operator:0.24.0
 amazon/aws-cli:latest
 bitnami/kubectl:1.30.0-debian-12-r0
+jaegertracing/jaeger-clickhouse:0.13.0
+jaegertracing/jaeger-collector:1.57.0
+jaegertracing/jaeger-ingester:1.57.0
+jaegertracing/jaeger-query:1.57.0
