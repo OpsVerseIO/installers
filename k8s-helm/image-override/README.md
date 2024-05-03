@@ -17,9 +17,9 @@ For authenticating on Private ECR registry use the following command -
 `aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.<region>.amazonaws.com`
 
 * Export the CONTAINER_TARGET_REGISTRY and CONTAINER_REGION in the terminal as follows - 
-export CONTAINER_TARGET_REGISTRY=<aws_account_id>.dkr.ecr.<region>.amazonaws.com
-export CONTAINER_REGION=<region>
-export REPOSITORY_PREFIX=<your-repository-prefix>_opsverse
+export CONTAINER_TARGET_REGISTRY=[aws_account_id].dkr.ecr.[region].amazonaws.com
+export CONTAINER_REGION=[region]
+export REPOSITORY_PREFIX=[your-repository-prefix]_opsverse
 
 * You need to add a repository prefix that will be appended to your repository name. To do this, just export "REPOSITORY_PREFIX" as mentioned above 
 
