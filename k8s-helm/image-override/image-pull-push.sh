@@ -29,7 +29,7 @@ CONFIG_FILES=("public_images.txt" "private_images.txt" "internal_images.txt")
 
 for FILE in "${CONFIG_FILES[@]}"; 
 do
-    echo "FILE = '$FILE'"
+    echo "Pushing images from FILE = '$FILE'"
     if [ ! -f "$FILE" ]; then
         echo "Error: Config file '$FILE' does not exist."
     else 
