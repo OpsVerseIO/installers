@@ -25,7 +25,7 @@ victoriametrics/vmselect:v1.87.14-cluster
 victoriametrics/vmstorage:v1.87.14-cluster
 bats/bats:1.8.0
 bitnami/os-shell:12-debian-12-r18
-argoproj/argocd:v2.9.14
+argoproj/argocd:v2.9.15
 dexidp/dex:v2.38.0
 redis:7.0.13-alpine
 argoproj/workflow-controller:v3.5.5
