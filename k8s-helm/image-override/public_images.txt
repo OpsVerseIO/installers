@@ -64,3 +64,4 @@ jaegertracing/jaeger-clickhouse:0.13.0
 jaegertracing/jaeger-collector:1.57.0
 jaegertracing/jaeger-ingester:1.57.0
 jaegertracing/jaeger-query:1.57.0
+lmierzwa/karma:v0.120
