@@ -4,9 +4,10 @@ postgres:13.13-alpine
 kiwigrid/k8s-sidecar:1.25.3
 grafana/grafana:10.4.0
 bitnami/kafka-exporter:1.7.0-debian-12-r23
-jaegertracing/jaeger-collector:1.57.0
+jaegertracing/jaeger-collector:1.57-jaeger-ch-0.7.0
 jaegertracing/jaeger-ingester:1.36.0-grpcplugins.1
 jaegertracing/jaeger-query:1.36.0-grpcplugins.1
+jaegertracing/jaeger-query:1.57-jaeger-ch-0.7.0
 jaegertracing/jaeger-agent:1.36.0-grpcplugins.1
 grafana/loki:2.8.2
 nginxinc/nginx-unprivileged:1.25-alpine
@@ -24,6 +25,7 @@ victoriametrics/vminsert:v1.87.14-cluster
 victoriametrics/vmselect:v1.87.14-cluster
 victoriametrics/vmstorage:v1.87.14-cluster
 bats/bats:1.8.0
+webdevops/azure-metrics-exporter:24.2.0
 bitnami/os-shell:12-debian-12-r18
 argoproj/argocd:v2.9.15
 dexidp/dex:v2.38.0
@@ -31,6 +33,7 @@ redis:7.0.13-alpine
 argoproj/workflow-controller:v3.5.5
 argoproj/argoexec:v3.5.5
 argoproj/argocli:v3.5.5
+argoproj/argo-rollouts:v1.6.6
 openpolicyagent/kube-mgmt:8.5.5
 openpolicyagent/opa:0.60.0
 pyroscope/pyroscope:0.35.1
@@ -47,7 +50,7 @@ kubebuilder/kube-rbac-proxy:v0.14.0
 prometheuscommunity/postgres-exporter:v0.15.0
 oliver006/redis_exporter:v1.27.0
 victoriametrics/vmagent:v1.93.10
-otel/opentelemetry-collector-contrib:0.92.0
+otel/opentelemetry-collector-contrib:0.103.0
 open-telemetry/opentelemetry-operator/autoinstrumentation-dotnet:0.5.0
 open-telemetry/opentelemetry-operator/autoinstrumentation-java:1.21.0
 open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.34.0
@@ -55,9 +58,15 @@ open-telemetry/opentelemetry-operator/autoinstrumentation-python:0.36b0
 bitnami/sealed-secrets-controller:v0.15.0
 ingress-nginx/kube-webhook-certgen:v20231011-8b53cabe0
 ingress-nginx/controller:v1.9.5
-victoriametrics/operator:v0.35.1
+victoriametrics/operator:v0.46.4
 altinity/metrics-exporter:0.24.0
 altinity/clickhouse-operator:0.24.0
+altinity/metrics-exporter:0.18.5
+altinity/clickhouse-operator:0.18.5
+cert-manager/cert-manager-cainjector:v1.5.3
+cert-manager/cert-manager-controller:v1.5.3
+cert-manager/cert-manager-webhook:v1.5.3
+cert-manager/cert-manager-ctl:v1.5.3
 amazon/aws-cli:latest
 bitnami/kubectl:1.30.0-debian-12-r0
 jaegertracing/jaeger-clickhouse:0.13.0
