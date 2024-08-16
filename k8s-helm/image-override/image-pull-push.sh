@@ -26,6 +26,8 @@ fi
 
 CONFIG_FILES=("public_images.txt" "private_images.txt" "internal_images.txt")
 
+PULL_IMAGE_FAILS=()
+PUSH_IMAGE_FAILS=()
 
 for FILE in "${CONFIG_FILES[@]}"; 
 do
@@ -41,6 +43,11 @@ do
 
             # Pull the image from the source registry
             docker pull "$SOURCE_REGISTRY/$registryRepo/$image"
+            # Check if pull was successful
+            if [ $? -ne 0 ]; then
+                PULL_IMAGE_FAILS+=("$SOURCE_REGISTRY/$registryRepo/$image")
+                continue # Skip to the next image if the pull fails
+            fi
 
             # Retag the image for the target registry
             docker tag "$SOURCE_REGISTRY/$registryRepo/$image" "$TARGET_REGISTRY/$REPOSITORY_PREFIX/$image"
@@ -57,6 +64,30 @@ do
 
             # Push the image to the target registry
             docker push "$TARGET_REGISTRY/$REPOSITORY_PREFIX/$image"
+            # Check if push was successful
+            if [ $? -ne 0 ]; then
+                PUSH_IMAGE_FAILS+=("$TARGET_REGISTRY/$REPOSITORY_PREFIX/$image")
+            fi
+
+            # Remove the image from the local environment
+            docker rmi "$SOURCE_REGISTRY/$registryRepo/$image"
+            docker rmi "$TARGET_REGISTRY/$REPOSITORY_PREFIX/$image"
         done < "$FILE"
     fi
 done
+
+# Echo the list of failed pulls
+if [ ${#PULL_IMAGE_FAILS[@]} -ne 0 ]; then
+    echo "The following images were failed to pull:"
+    for failed_image in "${PULL_IMAGE_FAILS[@]}"; do
+        echo "$failed_image"
+    done
+fi
+
+# Echo the list of failed pushes
+if [ ${#PUSH_IMAGE_FAILS[@]} -ne 0 ]; then
+    echo "The following images were failed to push:"
+    for failed_image in "${PUSH_IMAGE_FAILS[@]}"; do
+        echo "$failed_image"
+    done
+fi
