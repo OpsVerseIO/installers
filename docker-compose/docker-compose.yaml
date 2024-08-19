@@ -11,7 +11,7 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint:
-      - /bin/agent
+      - /bin/grafana-agent
       - -config.file=/etc/agent-config/agent.yaml
       - -metrics.wal-directory=/tmp/agent/wal
       - -config.expand-env
