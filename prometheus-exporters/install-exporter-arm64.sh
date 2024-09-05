@@ -498,6 +498,11 @@ modules:
 EOF
   fi
 
+  if [ "$EXPORTER" == "snmp" ]; then
+    wget -O /etc/opsverse/exporters/snmp/snmp-config.yml https://raw.githubusercontent.com/prometheus/snmp_exporter/main/snmp.yml
+    touch /etc/opsverse/exporters/snmp/snmp-config-custom.yml
+  fi
+
 }
 
 function set_exporter_systemd () {
@@ -671,7 +676,7 @@ Description=Prometheus SNMP Exporter
 
 [Service]
 User=root
-ExecStart=/usr/local/bin/snmp_exporter
+ExecStart=/usr/local/bin/snmp_exporter  --config.file=/etc/opsverse/exporters/snmp/snmp-config.yml --config.file=/etc/opsverse/exporters/snmp/snmp-config-custom.yml
 Restart=always
 
 [Install]
@@ -773,8 +778,8 @@ function set_exporter_sysv () {
     fi
 
     if [ "$EXPORTER" == "snmp" ]; then
-      EXPORTER_CONFIG="N/A"
-      EXPORTER_COMMAND="/usr/local/bin/snmp_exporter"
+      EXPORTER_CONFIG="/etc/opsverse/exporters/snmp/snmp-config.yml"
+      EXPORTER_COMMAND="/usr/local/bin/snmp_exporter --config.file=/etc/opsverse/exporters/snmp/snmp-config.yml --config.file=/etc/opsverse/exporters/snmp/snmp-config-custom.yml"
       EXPORTER_KILLPROC="snmp_exporter"
     fi
 
