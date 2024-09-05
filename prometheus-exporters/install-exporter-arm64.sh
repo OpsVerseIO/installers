@@ -248,6 +248,20 @@ function download_exporter () {
     rm -rf ${EXPORTER_BASE_NAME}*
     rm -rf blackbox_exporter
   fi
+
+  if [ "$EXPORTER" == "snmp" ]; then
+    EXPORTER_VERSION="0.26.0"
+    EXPORTER_BASE_NAME="snmp_exporter-${EXPORTER_VERSION}.linux-arm64"
+    EXPORTER_DL_URL="https://github.com/prometheus/snmp_exporter/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
+
+    wget ${EXPORTER_DL_URL}
+    tar -xzf ${EXPORTER_BASE_NAME}.tar.gz
+    cp ${EXPORTER_BASE_NAME}/snmp_exporter /usr/local/bin/
+    chmod +x /usr/local/bin/snmp_exporter
+
+    # cleanup what was downloaded
+    rm -rf ${EXPORTER_BASE_NAME}*
+  fi
 }
 
 function set_exporter_custom_confs () {
@@ -650,7 +664,20 @@ WantedBy=multi-user.target
 EOF
   fi
 
+if [ "$EXPORTER" == "snmp" ]; then
+    cat << EOF > $EXPORTER_SERVICE_FILE
+[Unit]
+Description=Prometheus SNMP Exporter
 
+[Service]
+User=root
+ExecStart=/usr/local/bin/snmp_exporter
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  fi
 
   # Wrapped in this condition because some exporters (like the
   # jmx agent), don't need to run as services
@@ -664,7 +691,7 @@ EOF
 # returns true (0) if exporter needs a sysv init script
 function exporter_needs_sysv () {
 
-  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] || [ "$1" == "postgres" ] || [ "$1" == "rds" ] || [ "$1" == "blackbox" ] ; then
+  if [ "$1" == "redis" ] || [ "$1" == "mysqld" ] || [ "$1" == "mongodb" ] || [ "$1" == 'nginx' ] || [ "$1" == "cadvisor" ] || [ "$1" == "vmware" ] || [ "$1" == "opsverse-otelcontribcol" ] || [ "$1" == "postgres" ] || [ "$1" == "rds" ] || [ "$1" == "blackbox" ] || [ "$1" == "snmp" ] ; then
     return 0
   fi
 
@@ -743,6 +770,12 @@ function set_exporter_sysv () {
       EXPORTER_CONFIG="/etc/opsverse/exporters/blackbox/config.yaml"
       EXPORTER_COMMAND="/usr/local/bin/blackbox_exporter --config.file=/etc/opsverse/exporters/blackbox/config.yaml"
       EXPORTER_KILLPROC="blackbox_exporter"
+    fi
+
+    if [ "$EXPORTER" == "snmp" ]; then
+      EXPORTER_CONFIG="N/A"
+      EXPORTER_COMMAND="/usr/local/bin/snmp_exporter"
+      EXPORTER_KILLPROC="snmp_exporter"
     fi
 
     cat << EOF > $EXPORTER_SYSV_SCRIPT
@@ -984,6 +1017,21 @@ EOF
     },
     "targets": [
       "localhost:9115"
+    ]
+  }
+]
+EOF
+  fi
+
+  if [ "$EXPORTER" == "snmp" ]; then
+    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
+[
+  {
+    "labels": {
+      "job": "integrations/snmp-exporter"
+    },
+    "targets": [
+      "localhost:9116"
     ]
   }
 ]
