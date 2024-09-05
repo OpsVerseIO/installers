@@ -63,7 +63,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Show help, if necessary, and exit
-if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" -a "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" -a "$EXPORTER" != "rds" -a "$EXPORTER" != "blackbox" ]; then
+if [ "$HELP" = true ] || [ "$EXPORTER" != "mysqld" -a "$EXPORTER" != "mongodb" -a "$EXPORTER" != "redis" -a "$EXPORTER" != "jmx" -a "$EXPORTER" != "nginx" -a "$EXPORTER" != "cadvisor" -a "$EXPORTER" != "vmware" -a "$EXPORTER" != "opsverse-otelcontribcol" -a "$EXPORTER" != "postgres" -a "$EXPORTER" != "rds" -a "$EXPORTER" != "blackbox" -a "$EXPORTER" != "snmp" ]; then
   echo "Installs a prometheus exporter on your machine"
   echo ""
   echo "Usage: sudo ./install-exporter.sh -e <exporter>" 
