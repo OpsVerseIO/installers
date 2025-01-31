@@ -164,7 +164,7 @@ function download_exporter () {
   fi
  
   if [ "$EXPORTER" == "jmx" ]; then
-    EXPORTER_VERSION="1.0.1"
+    EXPORTER_VERSION="1.1.0"
     EXPORTER_BASE_NAME="jmx_prometheus_javaagent-${EXPORTER_VERSION}"
     EXPORTER_DL_URL="https://github.com/prometheus/jmx_exporter/releases/download/${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.jar"
 
