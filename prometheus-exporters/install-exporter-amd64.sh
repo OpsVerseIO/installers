@@ -350,7 +350,9 @@ receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317
       http:
+        endpoint: 0.0.0.0:4318
   jaeger:
     protocols:
       grpc:
