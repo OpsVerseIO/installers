@@ -177,8 +177,8 @@ function download_exporter () {
   fi
 
   if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
-    EXPORTER_VERSION="0.92.0"
-    EXPORTER_BASE_NAME="otelcol-contrib_0.92.0_linux_arm64"
+    EXPORTER_VERSION="0.130.1"
+    EXPORTER_BASE_NAME="otelcol-contrib_0.130.1_linux_arm64"
     EXPORTER_DL_URL="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${EXPORTER_VERSION}/${EXPORTER_BASE_NAME}.tar.gz"
 
     wget ${EXPORTER_DL_URL}
@@ -355,41 +355,8 @@ receivers:
       thrift_compact:
       thrift_http:
   zipkin: {}
-  # Dummy receiver that's never used, because a pipeline is required to have one.
-  # Picked highest port in attempt to avoid conflict
-  otlp/spanmetrics:
-    protocols:
-      grpc:
-        endpoint: "localhost:65535"
 processors:
   batch:
-  spanmetrics:
-    metrics_exporter: prometheus
-    latency_histogram_buckets: [1ms, 2ms, 6ms, 10ms, 100ms, 250ms]
-    dimensions:
-      # If the span is missing http.method, the processor will insert
-      # the http.method dimension with value 'GET'.
-      # For example, in the following scenario, http.method is not present in a span and
-      # so will be added as a dimension to the metric with value "GET":
-      # - promexample_calls{http_method="GET",operation="/Address",service_name="shippingservice",
-      #                     span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_UNSET"} 1
-      - name: http.method
-        default: GET
-
-      # If a default is not provided, the http.status_code dimension will be omitted
-      # if the span does not contain http.status_code.
-      # For example, consider a scenario with two spans, one span having http.status_code=200 and another
-      # missing http.status_code. Two metrics would result with this configuration, one with the http_status_code
-      # omitted and the other included:
-      # - promexample_calls{http_status_code="200",operation="/Address",service_name="shippingservice",
-      #                     span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_UNSET"} 1
-      # - promexample_calls{operation="/Address",service_name="shippingservice",span_kind="SPAN_KIND_SERVER",
-      #                     status_code="STATUS_CODE_UNSET"} 1
-      - name: http.status_code
-      # - service.name
-      # - operation
-      # - span.kind
-      # - status.code
   memory_limiter:
     # 80% of maximum memory up to 2G
     limit_mib: 1500
@@ -405,11 +372,10 @@ processors:
         value: "${INSTANCE}"
         action: insert
 extensions:
-  health_check: {}
+  health_check:
+    endpoint: "0.0.0.0:13133"
   zpages: {}
 exporters:
-  prometheus:
-    endpoint: "0.0.0.0:8889"
   prometheusremotewrite:
     endpoint: "${METRICS_COLLECTOR_ENDPOINT}"
     tls:
@@ -425,15 +391,8 @@ service:
   pipelines:
     traces/1:
       receivers: [otlp, zipkin, jaeger]
-      processors: [memory_limiter, batch, attributes/insert, spanmetrics, probabilistic_sampler]
+      processors: [memory_limiter, batch, attributes/insert, probabilistic_sampler]
       exporters: [zipkin]
-    # This pipeline acts as a proxy to the 'metrics' pipeline below,
-    # allowing for further metrics processing if required.
-    metrics/spanmetrics:
-      # This receiver is just a dummy and never used.
-      # Added to pass validation requiring at least one receiver in a pipeline.
-      receivers: [otlp/spanmetrics]
-      exporters: [prometheus]
     metrics:
       receivers: [otlp]
       processors: [batch]
@@ -917,21 +876,6 @@ EOF
     },
     "targets": [
       "localhost:9121"
-    ]
-  }
-]
-EOF
-  fi
-
-  if [ "$EXPORTER" == "opsverse-otelcontribcol" ]; then
-    cat << EOF > /etc/opsverse/targets/${EXPORTER}-exporter.json
-[
-  {
-    "labels": {
-      "job": "integrations/spanmetrics"
-    },
-    "targets": [
-      "localhost:8889"
     ]
   }
 ]
